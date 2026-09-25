@@ -1,0 +1,25 @@
+-- CountWise — Subphase 23A.2: add user_preferences.login_notifications_enabled
+--
+-- Standalone version of the block now also appended to supabase/schema.sql,
+-- for running once directly against the live Supabase project — same
+-- dual-file convention as phase23_employee_subtype.sql and
+-- migrate_fuel_category.sql.
+--
+-- Safe to re-run: `add column if not exists` is idempotent.
+--
+-- Additive only. Every existing user_preferences row (and every new one)
+-- defaults to true — matching "notifications on by default" already used
+-- for notification_enabled in Phase 20. No existing row is touched beyond
+-- picking up this new column at its default.
+--
+-- Deliberately its own column, not a reuse of notification_enabled: that
+-- column already means "inactivity reminders on/off" (Phase 20) — a
+-- different, independently-toggleable concern from "notify me on
+-- successful sign-in" (Subphase 23A.2). Reusing it would silently couple
+-- two unrelated settings behind one switch.
+--
+-- No RLS change needed: user_preferences' existing "own preferences"
+-- policy is row-level (`using (auth.uid() = user_id)`), already covers
+-- this new column automatically.
+
+alter table user_preferences add column if not exists login_notifications_enabled boolean not null default true;

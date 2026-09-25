@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Amounts and dates use tabular figures so columns of numbers line up,
+   the way a real ledger or passbook does. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sidebar scrollbar — themed to match each mode instead of the
+   browser-default light-gray bar, which looked foreign against the dark
+   surface. Reuses the existing line/lineDark tokens, no new colors.
+   Thumb only, transparent track so it blends into the sidebar background
+   when not needed. */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #E7E2D8 transparent;
+}
+.dark .sidebar-scroll {
+  scrollbar-color: #2B2E34 transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: #E7E2D8;
+  border-radius: 9999px;
+}
+.dark .sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: #2B2E34;
+}
