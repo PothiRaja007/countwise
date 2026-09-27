@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Plus, X, ArrowLeft } from 'lucide-react'
+import { Plus, X, ArrowLeft, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { formatCurrency } from '../lib/format.js'
 import PageHeader from '../components/layout/PageHeader.jsx'
 import ErrorState from '../components/layout/ErrorState.jsx'
 import { sumByCategory, estimatedGrossAnnual, estimatedMonthlyTakeHome, hasIncompleteComponents } from '../lib/ctcEngine.js'
+import { CTC_EXTRACTION_SCHEMA, CTC_EXTRACTION_PROMPT, validateExtractedComponents } from '../lib/ctcExtraction.js'
 import { friendlyError } from '../lib/errorMessages.js'
+import { parseAmountInput } from '../lib/amountParser.js'
 import ValueBadge from '../components/ui/ValueBadge.jsx'
 import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
@@ -14,11 +16,19 @@ import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 
 // Subphase 24.2 — the real CTC Explorer page, replacing the 23.5 stub.
-// Manual entry only: the user types in the components from their own
-// offer letter. No file upload, no PDF/document parsing, no AI call —
-// those are explicitly locked to V1.3 (Phase 30+). Every number shown
-// here comes from ctcEngine.js (Subphase 24.1) — this file does not do
-// its own financial math.
+// Manual entry: the user types in the components from their own offer
+// letter. Every number shown here comes from ctcEngine.js (Subphase
+// 24.1) — this file does not do its own financial math.
+//
+// Phase 31a addition: a second way to fill in the same draft-components
+// list — uploading the offer letter itself (PDF/image) and letting
+// Gemini (via the existing gemini-explain Edge Function) read it. This
+// does NOT add a second save path: extracted components are pushed
+// through the exact same handleAddDraftComponent() manual entry already
+// uses, land in the same draftComponents array, and go through the exact
+// same, single, unmodified handleSave() below. A null amount from Gemini
+// is never guessed — it lands in the list exactly like a manually-typed
+// component with the amount field left blank.
 
 const CATEGORY_OPTIONS = [
   { value: 'basic', label: 'Basic' },
@@ -37,6 +47,22 @@ let draftIdCounter = 0
 function nextDraftId() {
   draftIdCounter += 1
   return `draft-${draftIdCounter}`
+}
+
+// Phase 31a — reads a File as base64 for the Edge Function's fileData
+// field. Browser-only (FileReader), so this stays a small local helper
+// rather than living in the pure ctcExtraction.js lib file.
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result || '')
+      const base64 = result.includes(',') ? result.split(',')[1] : result
+      resolve(base64)
+    }
+    reader.onerror = () => reject(reader.error || new Error('Could not read the file.'))
+    reader.readAsDataURL(file)
+  })
 }
 
 // Shared read-only breakdown — used both while building a new exploration
@@ -212,6 +238,11 @@ export default function CTCExplorer() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
+  // --- Phase 31a: document upload/extraction state ---
+  const [extractFile, setExtractFile] = useState(null)
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState(null)
+
   // --- viewing a saved exploration ---
   const [viewingExploration, setViewingExploration] = useState(null)
   const [viewingComponents, setViewingComponents] = useState([])
@@ -249,6 +280,9 @@ export default function CTCExplorer() {
     setDraftCtcAnnual('')
     setDraftComponents([])
     setSaveError(null)
+    setExtractFile(null)
+    setExtracting(false)
+    setExtractError(null)
   }
 
   const startNew = () => {
@@ -269,11 +303,66 @@ export default function CTCExplorer() {
     setDraftComponents((prev) => prev.filter((c) => c.id !== id))
   }
 
+  // Phase 31a — reads the uploaded document, sends it to the existing,
+  // unmodified gemini-explain Edge Function with a CTC-specific
+  // prompt/schema, validates the result defensively on top of the
+  // function's own server-side validation, then pushes each extracted
+  // component through the exact same handleAddDraftComponent() manual
+  // entry uses. There is no second save path here — this only ever adds
+  // to draftComponents, the same array the Save button below already
+  // saves via the one existing insert.
+  const handleExtractFromDocument = async () => {
+    if (!extractFile) return
+    setExtracting(true)
+    setExtractError(null)
+
+    try {
+      const base64 = await fileToBase64(extractFile)
+
+      const { data, error: invokeErr } = await supabase.functions.invoke('gemini-explain', {
+        body: {
+          prompt: CTC_EXTRACTION_PROMPT,
+          schema: CTC_EXTRACTION_SCHEMA,
+          fileData: { mimeType: extractFile.type, base64 },
+        },
+      })
+
+      if (invokeErr) {
+        // supabase-js wraps a non-2xx Edge Function response in a generic
+        // error — the function's own specific { error, message } body is
+        // only reachable via this Response, if present at all.
+        let serverMessage = null
+        try {
+          const body = await invokeErr.context?.json?.()
+          serverMessage = body?.message || body?.error || null
+        } catch {
+          // no readable body — fall through to the generic message below
+        }
+        throw new Error(serverMessage || invokeErr.message)
+      }
+
+      const validated = validateExtractedComponents(data?.data)
+      if (validated.length === 0) {
+        setExtractError("Couldn't find any components in that document. Try a clearer file, or add them manually below.")
+        return
+      }
+
+      validated.forEach((component) => {
+        handleAddDraftComponent({ id: nextDraftId(), ...component })
+      })
+      setExtractFile(null)
+    } catch (err) {
+      setExtractError(friendlyError(err, "Couldn't read that document. Please try again."))
+    } finally {
+      setExtracting(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaveError(null)
 
-    const ctcAnnual = Number(draftCtcAnnual)
-    if (!draftCtcAnnual.trim() || !Number.isFinite(ctcAnnual) || ctcAnnual <= 0) {
+    const ctcAnnual = parseAmountInput(draftCtcAnnual)
+    if (ctcAnnual === null || ctcAnnual <= 0) {
       setSaveError('Enter the total CTC from your offer letter (a positive amount) before saving.')
       return
     }
@@ -467,6 +556,41 @@ export default function CTCExplorer() {
                 ))}
               </div>
             )}
+
+            <div className="rounded-lg border border-line dark:border-lineDark p-4 space-y-3 mb-3">
+              <div className="flex items-start gap-2">
+                <Upload size={16} className="text-muted dark:text-mutedDark shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Extract from a document</p>
+                  <p className="text-xs text-muted dark:text-mutedDark mt-0.5">
+                    Upload your offer letter (PDF, PNG, JPEG, or WEBP) — components will be added below for you to
+                    review and edit, exactly like typing them in yourself. Nothing is saved until you click Save
+                    exploration.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="file"
+                  accept="application/pdf,image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    setExtractFile(e.target.files?.[0] || null)
+                    setExtractError(null)
+                  }}
+                  className="text-xs text-muted dark:text-mutedDark file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-surface dark:file:bg-charcoalSurface file:text-ink dark:file:text-offwhite"
+                />
+                <Button
+                  onClick={handleExtractFromDocument}
+                  disabled={!extractFile || extracting}
+                  className="px-3 py-1.5 rounded-md text-sm shrink-0"
+                >
+                  {extracting ? 'Reading document...' : 'Extract from document'}
+                </Button>
+              </div>
+
+              {extractError && <p className="text-xs text-bad">{extractError}</p>}
+            </div>
 
             <ComponentEntryForm onAdd={handleAddDraftComponent} />
           </div>

@@ -7,6 +7,17 @@
 // it reads no user data and writes to no database table. Feature-specific
 // prompts/schemas (CTC extraction etc.) belong to the callers, not here.
 //
+// Phase 31a addition: an optional `fileData: { mimeType, base64 }` field.
+// When present, it's sent to Gemini as an additional multimodal part
+// alongside the text prompt, so a caller can ask Gemini to read an
+// uploaded PDF/image rather than plain text alone. This is strictly
+// additive and backward-compatible — every existing caller that sends
+// only { prompt, schema } is completely unaffected; `fileData` is simply
+// undefined for them, and the request to Gemini is built exactly as
+// before. Nothing else about the function's behavior changed for them:
+// same JWT validation, same schema validation, same error handling, same
+// model.
+//
 // Deploy:
 //   supabase secrets set GEMINI_API_KEY=<key from Google AI Studio>
 //   supabase functions deploy gemini-explain
@@ -43,6 +54,12 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MO
 const TIMEOUT_MS = 25_000
 const MAX_PROMPT_CHARS = 20_000
 const MAX_SCHEMA_CHARS = 10_000
+// ~6MB of decoded file data (base64 runs ~4/3 the size of the original
+// bytes) — comfortably inside Gemini's inline-data limits and enough for
+// any realistic offer-letter/CTC document, without letting an oversized
+// upload tie up the function or the outbound Gemini call.
+const MAX_FILE_BASE64_CHARS = 8_000_000
+const ALLOWED_FILE_MIME_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp'])
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -79,19 +96,44 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- Step 2: validate the request body.
-    let body: { prompt?: unknown; schema?: unknown }
+    let body: { prompt?: unknown; schema?: unknown; fileData?: unknown }
     try {
       body = await req.json()
     } catch {
       return json({ error: 'Request body must be JSON' }, 400)
     }
 
-    const { prompt, schema } = body ?? {}
+    const { prompt, schema, fileData } = body ?? {}
     if (typeof prompt !== 'string' || prompt.trim().length === 0 || prompt.length > MAX_PROMPT_CHARS) {
       return json({ error: 'prompt must be a non-empty string' }, 400)
     }
     if (typeof schema !== 'object' || schema === null || Array.isArray(schema) || JSON.stringify(schema).length > MAX_SCHEMA_CHARS) {
       return json({ error: 'schema must be a JSON schema object' }, 400)
+    }
+
+    // fileData is optional — every existing caller omits it entirely, in
+    // which case this whole block is skipped and filePart stays null, so
+    // the Gemini request below is built exactly as it was before this
+    // field existed.
+    let filePart: { inlineData: { mimeType: string; data: string } } | null = null
+    if (fileData !== undefined) {
+      const fd = fileData as { mimeType?: unknown; base64?: unknown } | null
+      if (
+        typeof fd !== 'object' ||
+        fd === null ||
+        typeof fd.mimeType !== 'string' ||
+        typeof fd.base64 !== 'string' ||
+        fd.base64.length === 0
+      ) {
+        return json({ error: 'fileData must be an object with mimeType and base64 strings' }, 400)
+      }
+      if (!ALLOWED_FILE_MIME_TYPES.has(fd.mimeType)) {
+        return json({ error: 'unsupported file type. Upload a PDF, PNG, JPEG, or WEBP file.' }, 400)
+      }
+      if (fd.base64.length > MAX_FILE_BASE64_CHARS) {
+        return json({ error: 'file_too_large', message: 'That file is too large. Please upload a smaller document.' }, 400)
+      }
+      filePart = { inlineData: { mimeType: fd.mimeType, data: fd.base64 } }
     }
 
     let validate: (data: unknown) => boolean
@@ -116,7 +158,12 @@ Deno.serve(async (req: Request) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          contents: [
+            {
+              role: 'user',
+              parts: filePart ? [{ text: prompt }, filePart] : [{ text: prompt }],
+            },
+          ],
           generationConfig: { responseMimeType: 'application/json', responseJsonSchema: schema },
         }),
         signal: controller.signal,
