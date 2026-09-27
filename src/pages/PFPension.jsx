@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Landmark, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { Landmark, ShieldCheck, AlertTriangle, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { formatCurrency } from '../lib/format.js'
@@ -7,6 +7,8 @@ import PageHeader from '../components/layout/PageHeader.jsx'
 import ErrorState from '../components/layout/ErrorState.jsx'
 import { calculateRetirementBreakdown } from '../lib/pfEngine.js'
 import { sumByCategory } from '../lib/salaryEngine.js'
+import { buildPFExplanationPrompt, PF_EXPLANATION_SCHEMA } from '../lib/explainPF.js'
+import { friendlyError } from '../lib/errorMessages.js'
 import ValueBadge from '../components/ui/ValueBadge.jsx'
 import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
@@ -71,6 +73,104 @@ function BenefitRow({ label, result, description }) {
       </div>
 
       {unavailable && <p className="mt-3 text-xs text-muted dark:text-mutedDark">{result.reason}</p>}
+      {!unavailable && <ExplainAction label={label} result={result} />}
+    </div>
+  )
+}
+
+// Phase 34 — Gemini Explanation Layer, PF/Pension only for now (CTC and
+// Salary get the same treatment as a follow-up once this is proven).
+//
+// Gemini explains numbers that already exist; it never produces a number
+// of its own. Every figure in the prompt (built by explainPF.js) comes
+// straight from this row's already-calculated pfEngine.js result — this
+// component does not calculate or estimate anything. Calls the existing,
+// unmodified gemini-explain Edge Function with a plain text-only prompt
+// (no fileData), same pattern CTCExplorer.jsx's document extraction
+// already uses for error handling. Nothing here is ever written to the
+// database — the explanation is fetched fresh each time and held only in
+// local component state.
+function ExplainAction({ label, result }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [explanation, setExplanation] = useState(null)
+
+  const handleExplain = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const prompt = buildPFExplanationPrompt({
+        label,
+        formattedAmount: formatCurrency(result.amount),
+        rateUsed: result.rateUsed,
+        effectiveFrom: formatDate(result.ratePeriod.effectiveFrom),
+        effectiveTo: result.ratePeriod.effectiveTo ? formatDate(result.ratePeriod.effectiveTo) : null,
+        sourceLabel: result.source?.url || `${result.source?.scheme ? `${result.source.scheme.toUpperCase()} ` : ''}verified rule`,
+      })
+
+      const { data, error: invokeErr } = await supabase.functions.invoke('gemini-explain', {
+        body: { prompt, schema: PF_EXPLANATION_SCHEMA },
+      })
+
+      if (invokeErr) {
+        // supabase-js wraps a non-2xx Edge Function response in a generic
+        // error — the function's own specific { error, message } body is
+        // only reachable via this Response, if present at all. Same
+        // pattern as CTCExplorer.jsx's document-extraction error handling.
+        let serverMessage = null
+        try {
+          const body = await invokeErr.context?.json?.()
+          serverMessage = body?.message || body?.error || null
+        } catch {
+          // no readable body — fall through to the generic message below
+        }
+        throw new Error(serverMessage || invokeErr.message)
+      }
+
+      const text = data?.data?.explanation
+      if (typeof text !== 'string' || text.trim().length === 0) {
+        throw new Error('gemini-explain returned no explanation text')
+      }
+      setExplanation(text)
+    } catch (err) {
+      setError(friendlyError(err, "Couldn't get an explanation right now. Please try again."))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mt-3">
+      {!explanation && (
+        <Button
+          variant="text"
+          onClick={handleExplain}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 text-xs"
+        >
+          <Sparkles size={12} />
+          {loading ? 'Asking...' : 'Explain this'}
+        </Button>
+      )}
+
+      {error && <p className="text-xs text-bad mt-1.5">{error}</p>}
+
+      {/* Deliberately NOT a ValueBadge and NOT the gold dashed-border
+          treatment used for calculated/estimated/suggested values — an
+          AI-generated explanation of already-correct data is a genuinely
+          different kind of thing than a certainty/provenance state on a
+          number, so it gets its own distinct, clearly-labeled box below
+          the real figures, never inline with them. */}
+      {explanation && (
+        <div className="mt-1 max-w-xl rounded-md border border-line dark:border-lineDark bg-paper dark:bg-charcoal p-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted dark:text-mutedDark mb-1.5">
+            <Sparkles size={11} />
+            AI explanation
+          </p>
+          <p className="text-xs text-ink dark:text-offwhite leading-relaxed italic">{explanation}</p>
+        </div>
+      )}
     </div>
   )
 }
