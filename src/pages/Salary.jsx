@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, X, ArrowLeft, Wallet, Star } from 'lucide-react'
+import { Plus, X, ArrowLeft, Wallet, Star, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { formatCurrency } from '../lib/format.js'
@@ -7,6 +7,7 @@ import PageHeader from '../components/layout/PageHeader.jsx'
 import ErrorState from '../components/layout/ErrorState.jsx'
 import { sumByCategory, estimatedGrossMonthly, estimatedTakeHomeMonthly, hasIncompleteComponents } from '../lib/salaryEngine.js'
 import MoneyInboxInput from '../components/money-inbox/MoneyInboxInput.jsx'
+import { buildSalaryExplanationPrompt, SALARY_EXPLANATION_SCHEMA } from '../lib/explainSalary.js'
 import { friendlyError } from '../lib/errorMessages.js'
 import ValueBadge from '../components/ui/ValueBadge.jsx'
 import Button from '../components/ui/Button.jsx'
@@ -125,6 +126,115 @@ function SalaryBreakdown({ components }) {
           </p>
         </div>
       </div>
+
+      <ExplainAction totals={totals} gross={gross} takeHome={takeHome} />
+    </div>
+  )
+}
+
+// Phase 34 (extended) — Gemini Explanation Layer for Salary. Same pattern
+// and guardrails as PFPension.jsx's ExplainAction (read that file's
+// comment for the full rationale) — duplicated here rather than
+// extracted into a shared component, since PFPension.jsx is explicitly
+// off-limits to modify for this task. Gemini explains numbers that
+// already exist; it never produces a number of its own. Every figure in
+// the prompt (built by explainSalary.js) comes straight from this
+// breakdown's already-calculated salaryEngine.js results — this
+// component does not calculate or estimate anything itself. Calls the
+// existing, unmodified gemini-explain Edge Function with a plain
+// text-only prompt. Nothing here is ever written to the database — the
+// explanation is fetched fresh each time and held only in local
+// component state.
+//
+// The assumption strings passed below are the same wording already
+// displayed next to the gross/take-home figures above, in this same
+// component — kept in sync deliberately, not re-derived.
+function ExplainAction({ totals, gross, takeHome }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [explanation, setExplanation] = useState(null)
+
+  const handleExplain = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const categoryBreakdown = Object.entries(totals).map(([category, amount]) => ({
+        label: CATEGORY_LABELS[category] || category,
+        formattedAmount: formatCurrency(amount),
+      }))
+
+      const prompt = buildSalaryExplanationPrompt({
+        categoryBreakdown,
+        formattedGrossMonthly: formatCurrency(gross),
+        grossAssumption: 'Basic + Allowance only — based on the values you provided, not a statutory calculation.',
+        formattedTakeHomeMonthly: formatCurrency(takeHome),
+        takeHomeAssumption:
+          "Does not account for income tax or verified PF rates. Your actual salary may differ; you'll be able to correct the amount when you log what you actually received.",
+      })
+
+      const { data, error: invokeErr } = await supabase.functions.invoke('gemini-explain', {
+        body: { prompt, schema: SALARY_EXPLANATION_SCHEMA },
+      })
+
+      if (invokeErr) {
+        // supabase-js wraps a non-2xx Edge Function response in a generic
+        // error — the function's own specific { error, message } body is
+        // only reachable via this Response, if present at all. Same
+        // pattern as PFPension.jsx's ExplainAction.
+        let serverMessage = null
+        try {
+          const body = await invokeErr.context?.json?.()
+          serverMessage = body?.message || body?.error || null
+        } catch {
+          // no readable body — fall through to the generic message below
+        }
+        throw new Error(serverMessage || invokeErr.message)
+      }
+
+      const text = data?.data?.explanation
+      if (typeof text !== 'string' || text.trim().length === 0) {
+        throw new Error('gemini-explain returned no explanation text')
+      }
+      setExplanation(text)
+    } catch (err) {
+      setError(friendlyError(err, "Couldn't get an explanation right now. Please try again."))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mt-3">
+      {!explanation && (
+        <Button
+          variant="text"
+          onClick={handleExplain}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 text-xs"
+        >
+          <Sparkles size={12} />
+          {loading ? 'Asking...' : 'Explain this'}
+        </Button>
+      )}
+
+      {error && <p className="text-xs text-bad mt-1.5">{error}</p>}
+
+      {/* Deliberately NOT a ValueBadge and NOT the gold dashed-border
+          treatment used for calculated/estimated/suggested values — an
+          AI-generated explanation of already-correct data is a genuinely
+          different kind of thing than a certainty/provenance state on a
+          number, so it gets its own distinct, clearly-labeled box below
+          the real figures, never inline with them. */}
+      {explanation && (
+        <div className="mt-1 max-w-xl rounded-md border border-line dark:border-lineDark bg-paper dark:bg-charcoal p-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted dark:text-mutedDark mb-1.5">
+            <Sparkles size={11} />
+            AI explanation
+          </p>
+          <p className="text-xs text-ink dark:text-offwhite leading-relaxed italic">{explanation}</p>
+        </div>
+      )}
     </div>
   )
 }
