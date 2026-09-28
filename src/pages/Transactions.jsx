@@ -14,6 +14,7 @@ import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import { SPENDING_CONTEXTS, contextLabel, contextDescription, contextForType } from '../lib/spendingContext.js'
 
 // Wide enough to include every row already scoped by filterTransactions —
 // financialEngine's period functions still need bounds, but the actual
@@ -55,7 +56,7 @@ export default function Transactions() {
       supabase.from('categories').select('id, name, kind').or(`user_id.eq.${user.id},user_id.is.null`),
       supabase
         .from('transactions')
-        .select('id, account_id, to_account_id, category_id, type, amount, description, transaction_date, original_input, created_at')
+        .select('id, account_id, to_account_id, category_id, type, amount, description, transaction_date, original_input, created_at, spending_context')
         .eq('user_id', user.id),
     ])
 
@@ -305,6 +306,10 @@ function TransactionRow({ transaction, categoryName, accountName, toAccountName,
   const amountClass = isTransfer ? 'text-ink dark:text-offwhite' : isIncome ? 'text-good' : 'text-bad'
   const sign = isTransfer ? '' : isIncome ? '+' : '-'
   const pillLabel = isTransfer ? 'Transfer' : categoryName || (isIncome ? 'Income' : 'Expense')
+  // Spending context only ever exists on an expense (the database enforces it).
+  const contextText = !isTransfer && !isIncome ? contextLabel(transaction.spending_context) : null
+  const accountLine = transaction.description ? (isTransfer ? `${accountName} → ${toAccountName}` : accountName) : null
+  const secondLine = [accountLine, contextText].filter(Boolean).join(' · ')
 
   return (
     <div className="group flex items-center justify-between py-3">
@@ -316,11 +321,7 @@ function TransactionRow({ transaction, categoryName, accountName, toAccountName,
           <div className="text-sm text-ink dark:text-offwhite truncate">
             {transaction.description || (isTransfer ? `${accountName} → ${toAccountName}` : accountName)}
           </div>
-          {transaction.description && (
-            <div className="text-xs text-muted dark:text-mutedDark truncate">
-              {isTransfer ? `${accountName} → ${toAccountName}` : accountName}
-            </div>
-          )}
+          {secondLine && <div className="text-xs text-muted dark:text-mutedDark truncate">{secondLine}</div>}
         </div>
       </div>
 
@@ -353,6 +354,7 @@ function EditModal({ transaction, accounts, categories, onClose, onSaved, onErro
   const [accountId, setAccountId] = useState(transaction.account_id || '')
   const [toAccountId, setToAccountId] = useState(transaction.to_account_id || '')
   const [date, setDate] = useState(transaction.transaction_date)
+  const [spendingContext, setSpendingContext] = useState(transaction.spending_context || '')
   const [saving, setSaving] = useState(false)
 
   const categoryOptions = categories.filter((c) => c.kind === (type === 'income' ? 'income' : 'expense'))
@@ -370,6 +372,9 @@ function EditModal({ transaction, accounts, categories, onClose, onSaved, onErro
         account_id: accountId,
         to_account_id: type === 'transfer' ? toAccountId : null,
         transaction_date: date,
+        // null (never ""), and cleared when this stops being an expense —
+        // the database rejects both an empty string and context on non-expenses.
+        spending_context: contextForType(type, spendingContext),
       })
       .eq('id', transaction.id)
     setSaving(false)
@@ -441,6 +446,27 @@ function EditModal({ transaction, accounts, categories, onClose, onSaved, onErro
                 </option>
               ))}
             </Select>
+          )}
+
+          {type === 'expense' && (
+            <div>
+              <Select
+                value={spendingContext}
+                onChange={(e) => setSpendingContext(e.target.value)}
+                aria-label="Spending context"
+                className="w-full bg-paper dark:bg-charcoal rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">Spending context (optional)...</option>
+                {SPENDING_CONTEXTS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+              {contextDescription(spendingContext) && (
+                <p className="text-xs text-muted dark:text-mutedDark mt-1.5">{contextDescription(spendingContext)}</p>
+              )}
+            </div>
           )}
 
           <Select

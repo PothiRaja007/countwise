@@ -9,6 +9,10 @@ import LegalPageLayout, { LegalSection } from '../components/layout/LegalPageLay
 //     integrated" — Gemini is integrated (Phases 30, 31a, 34, 33b);
 //   - "CTC Explorer, Salary, and PF/Pension are placeholders that store
 //     nothing" — they store CTC and salary data (Phases 24-26).
+// Phase 32.1: added the optional spending context on an expense to the
+// data description below. It is stored with the transaction under the same
+// per-user access rules and is never sent to any AI (see AIDataNotice.jsx).
+//
 // Maintenance rule: any change that alters what data is collected, or
 // who receives it, must update this page in the same change.
 //
@@ -29,7 +33,7 @@ export default function PrivacyPolicy() {
 
       <LegalSection heading="Information we collect">
         <p><strong>Account information.</strong> Your email address and password, handled entirely by Supabase Auth — CountWise's own code never sees or stores your password in plain text. You may optionally set a username, which is a display name only, shown back to you in greetings around the app — it isn't used to verify your identity.</p>
-        <p><strong>Financial data you enter.</strong> Everything you type into Money Inbox or add manually: transactions, accounts (wallet/bank, name and type only — never real account numbers), categories, budgets, goals and goal contributions, and Learning ROI items. CountWise never connects to a real bank or pulls this data from anywhere — you type it in, and only it is stored.</p>
+        <p><strong>Financial data you enter.</strong> Everything you type into Money Inbox or add manually: transactions (including, if you choose, a spending context on an expense — planned, routine, social or unplanned — which is a label you pick, never free text), accounts (wallet/bank, name and type only — never real account numbers), categories, budgets, goals and goal contributions, and Learning ROI items. CountWise never connects to a real bank or pulls this data from anywhere — you type it in, and only it is stored.</p>
         <p><strong>Preferences.</strong> Simple settings you control: dark mode, whether inactivity reminders are on and after how many days, and whether you get an email notification on sign-in. Also your life stage — student, employed, or both — and, if employed, whether you're a fresher or already working, which decides whether the work-related pages are shown.</p>
         <p>
           <strong>Employee-finance information (CTC, salary, PF/pension).</strong> If you use these

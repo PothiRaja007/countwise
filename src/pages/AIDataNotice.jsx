@@ -14,6 +14,9 @@ import LegalPageLayout, { LegalSection, FutureNote } from '../components/layout/
 //     components are saved only by the existing Save button, after review
 //   - Money Inbox and categorization are still deterministic (Phase 35,
 //     the optional AI fallback, is deliberately not built)
+//   - spending context is never sent -> enforced by a test:
+//     spendingContext.test.js fails if any file that builds or sends an
+//     AI prompt references it
 //   - the account details sent -> none: gemini-explain forwards only the
 //     prompt (and an uploaded file) to Google
 //   - "free (unpaid) quota" -> the Gemini key is a free-tier key
@@ -78,6 +81,10 @@ export default function AIDataNotice() {
             themselves.
           </li>
           <li>Anything you type into Money Inbox.</li>
+          <li>
+            The spending context you may tag on an expense (planned, routine, social or unplanned). It is
+            kept with the transaction and is never part of anything sent to an AI.
+          </li>
         </ul>
         <p>
           Requests are made by a CountWise server function that requires you to be signed in. It passes

@@ -14,7 +14,7 @@ const EXPORTS = [
     key: 'transactions',
     label: 'Transactions',
     table: 'transactions',
-    select: 'transaction_date, type, amount, description, account_id, to_account_id, category_id, original_input',
+    select: 'transaction_date, type, amount, description, account_id, to_account_id, category_id, original_input, spending_context',
     columns: [
       { key: 'transaction_date', label: 'Date' },
       { key: 'type', label: 'Type' },
@@ -24,6 +24,7 @@ const EXPORTS = [
       { key: 'to_account_id', label: 'To Account ID' },
       { key: 'category_id', label: 'Category ID' },
       { key: 'original_input', label: 'Original Input' },
+      { key: 'spending_context', label: 'Spending Context' },
     ],
   },
   {

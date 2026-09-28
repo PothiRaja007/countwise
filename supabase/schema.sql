@@ -796,3 +796,51 @@ where not exists (
   select 1 from financial_rules fr
   where fr.scheme = v.scheme and fr.rule_key = v.rule_key and fr.effective_to is null
 );
+
+-- ============================================
+-- PHASE 32.1: Spending Context — transactions.spending_context
+-- ============================================
+-- One optional label on an EXPENSE saying why it was spent, from a closed
+-- set (planned / routine / social / unplanned). A tag, not a journal: no
+-- free text. It records context only — it never changes a balance, an
+-- income figure or an expense total.
+--
+-- Additive only: nullable, no default, existing rows keep null, and both
+-- constraints are satisfied by null so they cannot fail on existing data.
+--   transactions_spending_context_valid   only the four allowed values
+--   transactions_context_only_expense     context only on an expense, never
+--                                         on income or a transfer (which is
+--                                         why the app sends null when a user
+--                                         edits an expense into another type)
+--
+-- No RLS change: the existing "own transactions" policy is row-level, not
+-- column-level, so it already covers this column — verified against a real
+-- Postgres with two users, not assumed.
+--
+-- The allowed values must match src/lib/spendingContext.js; that file's
+-- test fails if the two ever drift apart. Standalone copy for running once
+-- against the live project: supabase/phase32_1_spending_context.sql (run it
+-- BEFORE deploying the app code that reads the column).
+alter table transactions add column if not exists spending_context text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'transactions_spending_context_valid'
+      and conrelid = 'public.transactions'::regclass
+  ) then
+    alter table transactions add constraint transactions_spending_context_valid
+      check (spending_context in ('planned','routine','social','unplanned'));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'transactions_context_only_expense'
+      and conrelid = 'public.transactions'::regclass
+  ) then
+    alter table transactions add constraint transactions_context_only_expense
+      check (spending_context is null or type = 'expense');
+  end if;
+end
+$$;
