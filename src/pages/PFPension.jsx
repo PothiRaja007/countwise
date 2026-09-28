@@ -11,6 +11,7 @@ import { buildPFExplanationPrompt, PF_EXPLANATION_SCHEMA } from '../lib/explainP
 import { friendlyError } from '../lib/errorMessages.js'
 import ValueBadge from '../components/ui/ValueBadge.jsx'
 import Button from '../components/ui/Button.jsx'
+import AiDisclosure from '../components/ui/AiDisclosure.jsx'
 import Input from '../components/ui/Input.jsx'
 
 function todayISO() {
@@ -349,6 +350,9 @@ export default function PFPension() {
                 <p className="text-xs uppercase tracking-wide text-muted dark:text-mutedDark">Monthly retirement breakdown</p>
                 {calculating && <span className="text-xs text-muted dark:text-mutedDark">Refreshing...</span>}
               </div>
+              <AiDisclosure className="mb-3">
+                Each "Explain this" below sends the figure it sits under to Google's Gemini AI.
+              </AiDisclosure>
 
               <div className="border-t border-line dark:border-lineDark">
                 <BenefitRow

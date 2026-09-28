@@ -11,6 +11,7 @@ import { buildSalaryExplanationPrompt, SALARY_EXPLANATION_SCHEMA } from '../lib/
 import { friendlyError } from '../lib/errorMessages.js'
 import ValueBadge from '../components/ui/ValueBadge.jsx'
 import Button from '../components/ui/Button.jsx'
+import AiDisclosure from '../components/ui/AiDisclosure.jsx'
 import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
@@ -207,15 +208,18 @@ function ExplainAction({ totals, gross, takeHome }) {
   return (
     <div className="mt-3">
       {!explanation && (
-        <Button
-          variant="text"
-          onClick={handleExplain}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 text-xs"
-        >
-          <Sparkles size={12} />
-          {loading ? 'Asking...' : 'Explain this'}
-        </Button>
+        <>
+          <Button
+            variant="text"
+            onClick={handleExplain}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 text-xs"
+          >
+            <Sparkles size={12} />
+            {loading ? 'Asking...' : 'Explain this'}
+          </Button>
+          <AiDisclosure>Sends the figures shown here to Google's Gemini AI.</AiDisclosure>
+        </>
       )}
 
       {error && <p className="text-xs text-bad mt-1.5">{error}</p>}

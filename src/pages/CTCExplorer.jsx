@@ -12,6 +12,7 @@ import { friendlyError } from '../lib/errorMessages.js'
 import { parseAmountInput } from '../lib/amountParser.js'
 import ValueBadge from '../components/ui/ValueBadge.jsx'
 import Button from '../components/ui/Button.jsx'
+import AiDisclosure from '../components/ui/AiDisclosure.jsx'
 import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
@@ -214,15 +215,18 @@ function ExplainAction({ totals, gross, takeHome }) {
   return (
     <div className="mt-3">
       {!explanation && (
-        <Button
-          variant="text"
-          onClick={handleExplain}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 text-xs"
-        >
-          <Sparkles size={12} />
-          {loading ? 'Asking...' : 'Explain this'}
-        </Button>
+        <>
+          <Button
+            variant="text"
+            onClick={handleExplain}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 text-xs"
+          >
+            <Sparkles size={12} />
+            {loading ? 'Asking...' : 'Explain this'}
+          </Button>
+          <AiDisclosure>Sends the figures shown here to Google's Gemini AI.</AiDisclosure>
+        </>
       )}
 
       {error && <p className="text-xs text-bad mt-1.5">{error}</p>}
@@ -692,6 +696,12 @@ export default function CTCExplorer() {
                   {extracting ? 'Reading document...' : 'Extract from document'}
                 </Button>
               </div>
+
+              <AiDisclosure>
+                Sends the file you choose to Google's Gemini AI. On Google's free tier, submitted content may be
+                used to improve Google's products and read by human reviewers, so if you're unsure, use a sample
+                document.
+              </AiDisclosure>
 
               {extractError && <p className="text-xs text-bad">{extractError}</p>}
             </div>

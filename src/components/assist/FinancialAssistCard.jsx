@@ -8,6 +8,7 @@ import { NARRATION_SCHEMA, buildNarrationPrompt, validateNarration } from '../..
 import { formatCurrency } from '../../lib/format.js'
 import { friendlyError } from '../../lib/errorMessages.js'
 import Button from '../ui/Button.jsx'
+import AiDisclosure from '../ui/AiDisclosure.jsx'
 
 function NarrationAction({ observations }) {
   const [loading, setLoading] = useState(false)
@@ -72,18 +73,7 @@ function NarrationAction({ observations }) {
             <Sparkles size={12} />
             {loading ? 'Asking...' : 'Summarise in plain words'}
           </Button>
-          <p className="text-[11px] text-muted dark:text-mutedDark mt-1 max-w-xl leading-4">
-            Sends the observations above to Google's Gemini AI. Read the{' '}
-            <a
-              href="/ai-data-notice"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-gold"
-            >
-              AI &amp; Data Processing Notice
-            </a>{' '}
-            first.
-          </p>
+          <AiDisclosure>Sends the observations above to Google's Gemini AI.</AiDisclosure>
         </>
       )}
 
