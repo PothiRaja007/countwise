@@ -10,6 +10,20 @@
 //     ("overspent", "wasted", "careless"), never predict, and never guess
 //     at causes. "Nothing recorded" is not "you spent nothing".
 
+// Words and phrases that never belong in Financial Assist text: advice,
+// judgment and alarm. One list, used both by assistCopy.test.js (to guard
+// the templates) and by assistNarration.js (to check AI-written text
+// before it is ever shown), so the two can never drift apart.
+export const FORBIDDEN_PHRASES = [
+  'should', 'must', 'overspend', 'overspent', 'waste', 'wasted', 'careless',
+  'bad', 'guilty', 'try to', 'need to', 'you could save', 'warning', 'danger',
+  'irresponsible', 'reckless', 'fail',
+  // Inflected forms: the check matches whole words, so "overspend"
+  // alone would let "overspending" through.
+  'overspending', 'wasting', 'wasteful', 'failed', 'failing', 'fails',
+  'worrying', 'concerning', 'alarming',
+]
+
 function pct(value) {
   return `${Math.round(Math.abs(value))}%`
 }

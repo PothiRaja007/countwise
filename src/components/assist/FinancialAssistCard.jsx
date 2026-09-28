@@ -1,17 +1,120 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Sparkles } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { useAuth } from '../../lib/AuthContext.jsx'
 import { computeObservations, monthToDateWindows, toISODateLocal } from '../../lib/assistEngine.js'
 import { describeObservation } from '../../lib/assistCopy.js'
+import { NARRATION_SCHEMA, buildNarrationPrompt, validateNarration } from '../../lib/assistNarration.js'
 import { formatCurrency } from '../../lib/format.js'
 import { friendlyError } from '../../lib/errorMessages.js'
 import Button from '../ui/Button.jsx'
 
+function NarrationAction({ observations }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [summary, setSummary] = useState(null)
+
+  const handleSummarise = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const prompt = buildNarrationPrompt(observations.map((o) => describeObservation(o, formatCurrency)))
+
+      const { data, error: invokeErr } = await supabase.functions.invoke('gemini-explain', {
+        body: { prompt, schema: NARRATION_SCHEMA },
+      })
+
+      if (invokeErr) {
+        // supabase-js wraps a non-2xx Edge Function response in a generic
+        // error; the function's own { error, message } body is only
+        // reachable through this Response. Same pattern as the Phase 34
+        // "Explain this" actions.
+        let serverMessage = null
+        try {
+          const body = await invokeErr.context?.json?.()
+          serverMessage = body?.message || body?.error || null
+        } catch {
+          // no readable body — fall through to the generic message
+        }
+        throw new Error(serverMessage || invokeErr.message)
+      }
+
+      // Untrusted until verified: the AI's text is shown only if every
+      // number in it traces back to an observation and it contains no
+      // advice, judgment, praise, prediction or guessed cause.
+      const text = data?.data?.summary
+      const check = validateNarration(text, observations)
+      if (!check.ok) {
+        // eslint-disable-next-line no-console
+        console.error('AI summary discarded by validation:', check.reason)
+        setError("Couldn't produce a reliable summary this time. The observations above are unchanged.")
+        return
+      }
+      setSummary(text.trim())
+    } catch (err) {
+      setError(friendlyError(err, "Couldn't get a summary right now. Please try again."))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mt-3">
+      {!summary && (
+        <>
+          <Button
+            variant="text"
+            onClick={handleSummarise}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 text-xs"
+          >
+            <Sparkles size={12} />
+            {loading ? 'Asking...' : 'Summarise in plain words'}
+          </Button>
+          <p className="text-[11px] text-muted dark:text-mutedDark mt-1 max-w-xl leading-4">
+            Sends the observations above to Google's Gemini AI. Read the{' '}
+            <a
+              href="/ai-data-notice"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-gold"
+            >
+              AI &amp; Data Processing Notice
+            </a>{' '}
+            first.
+          </p>
+        </>
+      )}
+
+      {error && <p className="text-xs text-bad mt-1.5">{error}</p>}
+
+      {/* Same treatment as the Phase 34 explanations: a separate, clearly
+          labeled box, never styled as data, never inline with the figures. */}
+      {summary && (
+        <div className="mt-1 max-w-xl rounded-md border border-line dark:border-lineDark bg-paper dark:bg-charcoal p-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted dark:text-mutedDark mb-1.5">
+            <Sparkles size={11} />
+            AI summary
+          </p>
+          <p className="text-xs text-ink dark:text-offwhite leading-relaxed italic">{summary}</p>
+          <p className="text-[11px] text-muted dark:text-mutedDark mt-2">
+            Written by AI from the observations above. The figures above are the source of truth.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Financial Assist (Phase 33a). Self-contained on purpose: it fetches its
 // own read-only data and owns its own loading/empty/error state, so the
 // page it is mounted on needs one import and one line, nothing more.
-// Reads only — no writes, and no AI. Every figure shown is computed by
-// assistEngine.js from existing engine functions.
+// Reads only — no writes. Every figure shown is computed by
+// assistEngine.js from existing engine functions. The optional AI summary
+// (33b) is layered on top and never replaces them: the observations are
+// always shown, and AI text is shown only after validateNarration()
+// confirms it adds no numbers and no advice, judgment or speculation.
 export default function FinancialAssistCard() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
@@ -115,28 +218,31 @@ export default function FinancialAssistCard() {
             </Button>
           </div>
         ) : result.observations.length > 0 ? (
-          <div className="border-y border-line dark:border-lineDark">
-            {result.observations.map((obs) => {
-              const { headline, detail } = describeObservation(obs, formatCurrency)
-              return (
-                <div
-                  key={obs.id}
-                  className="flex items-start gap-3 py-4 border-b border-line dark:border-lineDark last:border-b-0"
-                >
-                  <span
-                    className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
-                      obs.severity === 'notice' ? 'bg-gold' : 'bg-line dark:bg-lineDark'
-                    }`}
-                    aria-hidden="true"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm text-ink dark:text-offwhite leading-5">{headline}</p>
-                    <p className="text-xs text-muted dark:text-mutedDark mt-1 leading-5">{detail}</p>
+          <>
+            <div className="border-y border-line dark:border-lineDark">
+              {result.observations.map((obs) => {
+                const { headline, detail } = describeObservation(obs, formatCurrency)
+                return (
+                  <div
+                    key={obs.id}
+                    className="flex items-start gap-3 py-4 border-b border-line dark:border-lineDark last:border-b-0"
+                  >
+                    <span
+                      className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
+                        obs.severity === 'notice' ? 'bg-gold' : 'bg-line dark:bg-lineDark'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm text-ink dark:text-offwhite leading-5">{headline}</p>
+                      <p className="text-xs text-muted dark:text-mutedDark mt-1 leading-5">{detail}</p>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+            <NarrationAction key={result.observations.map((o) => o.id).join('|')} observations={result.observations} />
+          </>
         ) : (
           <p className="text-sm text-muted dark:text-mutedDark">
             {result.comparable

@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { describeObservation } from './assistCopy.js'
+import { describeObservation, FORBIDDEN_PHRASES } from './assistCopy.js'
 import { computeObservations } from './assistEngine.js'
 
 let passed = 0
@@ -20,11 +20,7 @@ function test(name, fn) {
 // Deterministic stand-in for formatCurrency, so figures are easy to find.
 const fmt = (n) => `Rs${n}`
 
-const FORBIDDEN = [
-  'should', 'must', 'overspend', 'overspent', 'waste', 'wasted', 'careless',
-  'bad', 'guilty', 'try to', 'need to', 'you could save', 'warning', 'danger',
-  'irresponsible', 'reckless', 'fail',
-]
+const FORBIDDEN = FORBIDDEN_PHRASES
 
 const textOf = (obs) => {
   const d = describeObservation(obs, fmt)

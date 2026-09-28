@@ -1,17 +1,23 @@
-import LegalPageLayout, { LegalSection, FutureNote } from '../components/layout/LegalPageLayout.jsx'
+import LegalPageLayout, { LegalSection } from '../components/layout/LegalPageLayout.jsx'
 
 // Phase 23B. Written to accurately describe CountWise as it actually
-// exists right now — not generic privacy-policy boilerplate. See the
-// Phase 23B handoff for exactly which lines below are forward-looking
-// (flagged inline too, via <FutureNote>) and need revisiting once those
-// features actually ship.
+// exists — not generic privacy-policy boilerplate.
+//
+// Updated 28 September 2026 (Phase 33b). Two statements written in 23B
+// had become false once later phases shipped, and were corrected:
+//   - "no AI or language-model provider (including Gemini) is
+//     integrated" — Gemini is integrated (Phases 30, 31a, 34, 33b);
+//   - "CTC Explorer, Salary, and PF/Pension are placeholders that store
+//     nothing" — they store CTC and salary data (Phases 24-26).
+// Maintenance rule: any change that alters what data is collected, or
+// who receives it, must update this page in the same change.
 //
 // This is a good-faith, accurate draft appropriate for a student
 // project / pre-launch app — not a substitute for real legal review if
 // CountWise is ever meant for real public users at scale.
 export default function PrivacyPolicy() {
   return (
-    <LegalPageLayout title="Privacy Policy" lastUpdated="18 September 2026">
+    <LegalPageLayout title="Privacy Policy" lastUpdated="28 September 2026">
       <LegalSection heading="What this document is">
         <p>
           This Privacy Policy explains what information CountWise collects, how it's stored, and what
@@ -24,18 +30,19 @@ export default function PrivacyPolicy() {
       <LegalSection heading="Information we collect">
         <p><strong>Account information.</strong> Your email address and password, handled entirely by Supabase Auth — CountWise's own code never sees or stores your password in plain text. You may optionally set a username, which is a display name only, shown back to you in greetings around the app — it isn't used to verify your identity.</p>
         <p><strong>Financial data you enter.</strong> Everything you type into Money Inbox or add manually: transactions, accounts (wallet/bank, name and type only — never real account numbers), categories, budgets, goals and goal contributions, and Learning ROI items. CountWise never connects to a real bank or pulls this data from anywhere — you type it in, and only it is stored.</p>
-        <p><strong>Preferences.</strong> Simple settings you control: dark mode, whether inactivity reminders are on and after how many days, and whether you get an email notification on sign-in.</p>
+        <p><strong>Preferences.</strong> Simple settings you control: dark mode, whether inactivity reminders are on and after how many days, and whether you get an email notification on sign-in. Also your life stage — student, employed, or both — and, if employed, whether you're a fresher or already working, which decides whether the work-related pages are shown.</p>
         <p>
-          <strong>Employee-finance information (CTC, salary, PF/pension).</strong> As of this document,
-          the CTC Explorer, Salary, and PF/Pension pages are placeholders — they don't yet accept or
-          store any input. This section will be filled in with real detail once those features are
-          actually built.
+          <strong>Employee-finance information (CTC, salary, PF/pension).</strong> If you use these
+          pages you can enter a CTC exploration (a label, your total CTC, and its components — each a
+          name, category and annual amount) and salary structures (a label and components, each a name,
+          category and monthly amount). Components can be typed in, or proposed from an offer letter
+          you choose to upload using the optional AI document extraction — see the AI &amp; Data
+          Processing Notice — for you to review before anything is saved. This information is stored
+          in Supabase like your other data, under the same per-user access rules, and is deleted with
+          your account. The PF/Pension page calculates from your active salary structure and stores
+          nothing of its own. The figures on these pages are estimates, not statements of what you
+          will actually receive.
         </p>
-        <FutureNote>
-          The paragraph above is forward-looking. CTC/salary/PF data collection doesn't exist in the
-          app yet (Phases 24–26 on the roadmap). This policy needs a real update once those features
-          land — it should not be read as describing anything currently active.
-        </FutureNote>
         <p>
           <strong>What we don't collect.</strong> CountWise never asks for or stores real bank account
           numbers, card numbers, government ID numbers, your physical location, or any browsing activity
@@ -66,10 +73,15 @@ export default function PrivacyPolicy() {
           Resend is never contacted for that sign-in.
         </p>
         <p>
-          No other third-party service currently receives your data. In particular, no AI or language-model
-          provider (including Gemini) is integrated into CountWise as of this document — see the separate
-          AI &amp; Data Processing Notice for detail on this.
+          <strong>Google (Gemini API)</strong> — used only for the optional AI features described in the
+          AI &amp; Data Processing Notice. Google receives data only when you click one of those
+          features — for example an offer-letter file you choose to extract, or the figures behind an
+          "Explain this" — and never your password, email address or username. CountWise currently uses
+          Google's free (unpaid) Gemini quota; under Google's terms for that tier, submitted content may
+          be used to improve Google's products and may be read by human reviewers. Please read the AI
+          &amp; Data Processing Notice before using these features with anything sensitive.
         </p>
+        <p>No other third-party service currently receives the data you enter into CountWise.</p>
       </LegalSection>
 
       <LegalSection heading="Your rights and controls">
