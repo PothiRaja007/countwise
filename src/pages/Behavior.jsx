@@ -6,6 +6,7 @@ import { computeBehaviorScore } from '../lib/behaviorScore.js'
 import { formatCurrency } from '../lib/format.js'
 import PageHeader from '../components/layout/PageHeader.jsx'
 import ErrorState from '../components/layout/ErrorState.jsx'
+import FinancialAssistCard from '../components/assist/FinancialAssistCard.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
 
 const PERIODS = [
@@ -265,6 +266,8 @@ export default function Behavior() {
             </p>
           </div>
         )}
+
+        <FinancialAssistCard />
       </div>
     </div>
   )
