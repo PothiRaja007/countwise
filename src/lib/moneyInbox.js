@@ -6,6 +6,7 @@
 // candidate objects for the review step to show, edit, and confirm.
 
 import { splitClauses, parseClause, matchCategory } from './categorization.js'
+import { detectSpendingContext } from './spendingContext.js'
 
 /**
  * Split a Money Inbox entry into one review candidate per clause.
@@ -22,7 +23,19 @@ export function buildReviewCandidates(text, { accountNames = [], categoryRules =
     // the clause's raw text (rather than a separately-extracted
     // description) still finds keywords like "coffee" or "fuel" fine.
     const categoryId = matchCategory(candidate.raw, categoryRules)
-    return { ...candidate, categoryId }
+    // Spending context (Phase 32.2): a SUGGESTION only. Everything above is
+    // unchanged; these fields are additive. The review step shows the
+    // suggestion (with the words it came from) and the user confirms or
+    // changes it — nothing here writes anything.
+    const context = detectSpendingContext(candidate.raw)
+    return {
+      ...candidate,
+      categoryId,
+      spendingContext: context.value,
+      contextSource: context.source,
+      contextMatched: context.matched,
+      contextConflict: context.conflict,
+    }
   })
 }
 

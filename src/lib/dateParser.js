@@ -55,6 +55,10 @@ export function parseDate(text, referenceDate = new Date()) {
 
   if (/\btoday\b/.test(lower)) return toISO(today)
   if (/\btomorrow\b/.test(lower)) return toISO(addDays(today, 1))
+  // Checked BEFORE "yesterday": "day before yesterday" contains that word.
+  if (/\bday before yesterday\b/.test(lower)) return toISO(addDays(today, -2))
+  const daysAgo = lower.match(/\b(\d+)\s+days?\s+ago\b/)
+  if (daysAgo) return toISO(addDays(today, -Number(daysAgo[1])))
   if (/\byesterday\b/.test(lower)) return toISO(addDays(today, -1))
   if (/\blast night\b/.test(lower)) return toISO(addDays(today, -1))
   if (/\bthis morning\b/.test(lower)) return toISO(today)

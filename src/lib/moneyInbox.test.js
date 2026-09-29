@@ -2,6 +2,8 @@
 // Run with: node src/lib/moneyInbox.test.js
 import assert from 'node:assert'
 import { buildReviewCandidates, checkDuplicate } from './moneyInbox.js'
+import { splitClauses, parseClause, matchCategory } from './categorization.js'
+import { contextForType } from './spendingContext.js'
 
 let passed = 0
 let failed = 0
@@ -206,6 +208,87 @@ test('checkDuplicate returns false for an empty recent-transactions list', () =>
   const candidate = buildReviewCandidates('coffee 80', { accountNames, categoryRules, referenceDate: REF_DATE })[0]
   const result = checkDuplicate(candidate, [])
   assert.strictEqual(result.isDuplicate, false)
+})
+
+
+// ---------------------------------------------------------------------
+// Spending context capture (Phase 32.2) — additive; nothing above changes.
+// ---------------------------------------------------------------------
+
+const rulesWithDinner = [...categoryRules, { keyword: 'dinner', category_id: 'cat-food', priority: 0 }]
+const build = (text) => buildReviewCandidates(text, { accountNames, categoryRules: rulesWithDinner, referenceDate: REF_DATE })
+
+test('the target sentence: "dinner with friends for 500rs paid from bank" -> Food, 500, social, Bank, date', () => {
+  const [c, ...rest] = build('dinner with friends for 500rs paid from bank')
+  assert.strictEqual(rest.length, 0)
+  assert.strictEqual(c.categoryId, 'cat-food')
+  assert.strictEqual(c.amount, 500)
+  assert.strictEqual(c.type, 'expense')
+  assert.strictEqual(c.account, 'Bank')
+  assert.strictEqual(c.date, '2026-08-30')
+  assert.strictEqual(c.spendingContext, 'social')
+  assert.strictEqual(c.contextSource, 'cue')
+  assert.strictEqual(c.contextMatched, 'with friends')
+  assert.deepStrictEqual(c.contextConflict, [])
+})
+
+test('no cue: the context fields exist and are empty, never guessed from the item', () => {
+  for (const text of ['coffee 80', 'bus 40 wallet', 'fuel 1,200 bank']) {
+    const c = build(text)[0]
+    assert.strictEqual(c.spendingContext, null, text)
+    assert.strictEqual(c.contextSource, null, text)
+    assert.strictEqual(c.contextMatched, null, text)
+    assert.deepStrictEqual(c.contextConflict, [], text)
+  }
+})
+
+test('every clause is read on its own: each item gets its own context and account', () => {
+  const [a, b, c] = build('coffee 80 routine wallet, lunch 250 with my team bank, bus 40')
+  assert.deepStrictEqual([a.spendingContext, a.account], ['routine', 'Wallet'])
+  assert.deepStrictEqual([b.spendingContext, b.account], ['social', 'Bank'])
+  assert.deepStrictEqual([c.spendingContext, c.account], [null, null])
+})
+
+test('disagreeing cues are surfaced, not resolved by guessing', () => {
+  const c = build('planned dinner with friends 800 bank')[0]
+  assert.strictEqual(c.spendingContext, null)
+  assert.deepStrictEqual(c.contextConflict, ['planned', 'social'])
+  assert.strictEqual(c.amount, 800) // the rest of the parse is unaffected
+})
+
+test('an explicit #tag is honoured and marked as the user\'s own', () => {
+  const c = build('dinner with friends 500 bank #routine')[0]
+  assert.strictEqual(c.spendingContext, 'routine')
+  assert.strictEqual(c.contextSource, 'tag')
+})
+
+test('a cue on income never changes the parse, and can never be written (the database allows context only on expenses)', () => {
+  const c = build('salary received 25000 monthly bank')[0]
+  assert.strictEqual(c.type, 'income')
+  assert.strictEqual(c.amount, 25000)
+  assert.strictEqual(c.spendingContext, 'routine') // detected...
+  assert.strictEqual(contextForType(c.type, c.spendingContext), null) // ...but never written for income
+})
+
+test('backward compatibility: every pre-existing field is exactly what the untouched parsers produce', () => {
+  const corpus = [
+    'coffee 80', 'bus 40 wallet', 'salary received 25000 bank', 'transfer 500 from bank to wallet',
+    'fuel 1,200', 'lunch 250 rs yesterday', 'coffee 80, bus 40, salary 25000', 'spent ₹350 on groceries',
+    'some random text', 'dinner with friends 500 bank', 'planned dinner with friends 800 bank', '',
+  ]
+  for (const text of corpus) {
+    const got = build(text)
+    const want = splitClauses(text).map((clause) => {
+      const base = parseClause(clause, { accountNames, referenceDate: REF_DATE })
+      return { ...base, categoryId: matchCategory(base.raw, rulesWithDinner) }
+    })
+    assert.strictEqual(got.length, want.length, `clause count for ${JSON.stringify(text)}`)
+    got.forEach((candidate, i) => {
+      for (const key of Object.keys(want[i])) {
+        assert.deepStrictEqual(candidate[key], want[i][key], `${JSON.stringify(text)}: field "${key}" changed`)
+      }
+    })
+  }
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

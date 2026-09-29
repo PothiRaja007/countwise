@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { SPENDING_CONTEXTS, contextForType, contextLabel } from '../../lib/spendingContext.js'
 import { ArrowLeft, X, AlertTriangle } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { useAuth } from '../../lib/AuthContext.jsx'
@@ -16,6 +17,12 @@ function deriveDescription(raw) {
     .replace(/\b(rs\.?|rupees)\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+// "A", "A and B", "A, B and C"
+function joinWithAnd(items) {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
 }
 
 function resolveAccountId(name, accounts) {
@@ -51,6 +58,11 @@ export default function ReviewDrawer({ candidates, accounts, categories, onBack,
       accountId: resolveAccountId(c.account || c.fromAccount, accounts),
       toAccountId: resolveAccountId(c.toAccount, accounts),
       duplicate: c.duplicate,
+      // Spending context: a suggestion from the typed words, editable here.
+      spendingContext: c.spendingContext || '',
+      contextSource: c.contextSource || null,
+      contextMatched: c.contextMatched || null,
+      contextConflict: c.contextConflict || [],
       included: true,
     }))
   )
@@ -92,6 +104,9 @@ export default function ReviewDrawer({ candidates, accounts, categories, onBack,
       amount: Math.abs(Number(r.amount)), // always positive, regardless of type
       description: r.description || null,
       transaction_date: r.date,
+      // null (never ""), and always null for income/transfer — the database
+      // rejects an empty string and context on anything but an expense.
+      spending_context: contextForType(r.type, r.spendingContext),
       original_input: r.raw,
     }))
 
@@ -196,6 +211,8 @@ function Section({ title, children }) {
 
 function RowEditor({ row, accounts, categories, onChange }) {
   const categoryOptions = categories.filter((c) => c.kind === (row.type === 'income' ? 'income' : 'expense'))
+  // Inferred from a phrase (not typed as an explicit #tag) and not yet touched by the user.
+  const contextSuggested = row.contextSource === 'cue' && !!row.spendingContext
 
   return (
     <div className="border border-line dark:border-lineDark rounded-lg p-3 space-y-2.5">
@@ -252,6 +269,29 @@ function RowEditor({ row, accounts, categories, onChange }) {
           </select>
         )}
 
+        {row.type === 'expense' && (
+          <>
+            <select
+              value={row.spendingContext || ''}
+              // Changing it by hand makes it the user's own choice, so the
+              // "suggested" styling and any conflict note go away.
+              onChange={(e) => onChange({ spendingContext: e.target.value, contextSource: null, contextConflict: [] })}
+              aria-label="Spending context"
+              className={`rounded-md px-2 py-1 bg-paper dark:bg-charcoal ${
+                contextSuggested ? 'border border-dashed border-gold text-gold' : 'border border-line dark:border-lineDark'
+              }`}
+            >
+              <option value="">Context...</option>
+              {SPENDING_CONTEXTS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            {contextSuggested && <span className="text-gold">suggested · from “{row.contextMatched}”</span>}
+          </>
+        )}
+
         <select
           value={row.accountId || ''}
           onChange={(e) => onChange({ accountId: e.target.value || null })}
@@ -287,6 +327,13 @@ function RowEditor({ row, accounts, categories, onChange }) {
           className="rounded-md px-2 py-1 bg-paper dark:bg-charcoal border border-line dark:border-lineDark font-mono"
         />
       </div>
+
+      {row.type === 'expense' && !row.spendingContext && row.contextConflict?.length > 1 && (
+        <div className="flex items-center gap-1.5 text-xs text-gold">
+          <AlertTriangle size={13} />
+          {joinWithAnd(row.contextConflict.map(contextLabel))} both apply — pick one context.
+        </div>
+      )}
 
       {row.duplicate?.isDuplicate && (
         <div className="flex items-center gap-1.5 text-xs text-gold">

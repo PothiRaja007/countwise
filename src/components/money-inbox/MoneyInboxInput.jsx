@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { useAuth } from '../../lib/AuthContext.jsx'
 import { buildReviewCandidates, checkDuplicate } from '../../lib/moneyInbox.js'
+import { contextCueHints } from '../../lib/spendingContext.js'
 import { friendlyError } from '../../lib/errorMessages.js'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
@@ -127,9 +128,33 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         rows={3}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="coffee 80, bus 40, salary 25000..."
+        placeholder="dinner with friends 500 bank, bus 40 wallet, salary 25000..."
         className="w-full bg-paper dark:bg-charcoal rounded-lg px-3 py-2.5 text-sm resize-none"
       />
+
+      {/* What the parser understands, so nobody has to guess. The context
+          list is generated from the same rules the parser uses, so it
+          cannot go out of date. Native <details>: no extra state. */}
+      <details className="text-xs text-muted dark:text-mutedDark">
+        <summary className="cursor-pointer hover:text-ink dark:hover:text-offwhite">What CountWise understands</summary>
+        <div className="mt-2 space-y-2 leading-5">
+          <p>
+            Write it the way you'd say it: what it was, how much, how you paid (use the account's name, like "bank"
+            or "wallet"), and, if you like, the circumstances. Use a comma between different items.
+          </p>
+          <div>
+            <p className="text-ink dark:text-offwhite">Spending context, suggested from phrases like:</p>
+            <ul className="mt-1 space-y-0.5">
+              {contextCueHints().map((h) => (
+                <li key={h.value}>
+                  <span className="font-medium text-ink dark:text-offwhite">{h.label}</span> — {h.examples.join(' · ')}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p>Nothing is saved until you confirm on the next screen, where you can change anything.</p>
+        </div>
+      </details>
 
       {error && <p className="text-sm text-bad">{error}</p>}
 

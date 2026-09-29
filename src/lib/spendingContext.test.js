@@ -9,6 +9,9 @@ import {
   contextLabel,
   contextDescription,
   contextForType,
+  detectSpendingContext,
+  contextCueHints,
+  CONTEXT_CUES,
 } from './spendingContext.js'
 import { FORBIDDEN_PHRASES } from './assistCopy.js'
 
@@ -150,6 +153,119 @@ test('no file that builds or sends an AI prompt references spending context', ()
       !/spending_?context|SPENDING_CONTEXT|spendingContext/i.test(text),
       `${relative(SRC, file)} references spending context, which must never reach an AI prompt`
     )
+  }
+})
+
+
+// ---- Detecting a context in Money Inbox text (Phase 32.2) ----------------
+
+const ctx = (text) => detectSpendingContext(text).value
+const detected = (context, texts) => {
+  for (const t of texts) assert.strictEqual(ctx(t), context, `expected ${context} for: ${t}`)
+}
+
+test('the target sentence: "dinner with friends for 500rs paid from bank" is Social, from "with friends"', () => {
+  assert.deepStrictEqual(detectSpendingContext('dinner with friends for 500rs paid from bank'), {
+    value: 'social', source: 'cue', matched: 'with friends', conflict: [],
+  })
+})
+
+test('people: relationship words after "with" suggest Social', () => {
+  detected('social', [
+    'lunch with my family 300', 'chai with colleagues 60', 'movie with the team 900', 'dinner with mom 400',
+    'trip snacks with a few classmates 250', 'pizza with roommates 700', 'coffee with my girlfriend 200',
+  ])
+})
+
+test('occasions suggest Social', () => {
+  detected('social', ['birthday cake 600', 'party snacks 450', 'farewell dinner 1200', 'gift for sister 1500', 'hangout cafe 350', 'split the bill 800'])
+})
+
+test('recurrence suggests Routine', () => {
+  detected('routine', ['netflix subscription 199', 'gym monthly 1500', 'milk daily 30', 'paper every week 20', 'recharge as usual 299', 'the usual coffee 80', 'recurring 500'])
+})
+
+test('spontaneity suggests Unplanned', () => {
+  detected('unplanned', ['suddenly bought headphones 2000', 'on a whim 300', 'spontaneous trip 1500', 'impulse buy 900', 'craving pizza 400', "couldn't resist 250", 'unplanned 500'])
+})
+
+test('intent suggests Planned', () => {
+  detected('planned', ['planned trip 5000', 'as planned 300', 'budgeted 1000', 'pre-booked tickets 2200', 'scheduled service 800', 'on my list 450'])
+})
+
+test('matching is case-insensitive and reports the words as the user typed them', () => {
+  assert.strictEqual(detectSpendingContext('Dinner WITH Friends 500').value, 'social')
+  assert.strictEqual(detectSpendingContext('Dinner WITH Friends 500').matched, 'WITH Friends')
+})
+
+test('"unplanned" is not misread as "planned" (no false conflict)', () => {
+  assert.deepStrictEqual(detectSpendingContext('it was unplanned'), { value: 'unplanned', source: 'cue', matched: 'unplanned', conflict: [] })
+})
+
+test('only whole words count: near-misses do not trigger', () => {
+  for (const t of ['socially awkward 100', 'routines book 200', 'partying 300', 'gifted 400', 'teamwork book 250', 'weeklys 10']) {
+    assert.strictEqual(ctx(t), null, `should not trigger: ${t}`)
+  }
+})
+
+test('no cue, no suggestion: items are never treated as cues (bus, coffee, rent depend on the person)', () => {
+  for (const t of ['coffee 80', 'bus 40', 'rent 8000', 'dinner 500', 'fuel 1200 bank', '', '   ']) {
+    assert.deepStrictEqual(detectSpendingContext(t), { value: null, source: null, matched: null, conflict: [] }, t)
+  }
+})
+
+test('ambiguous phrases were left out on purpose and do not trigger', () => {
+  for (const t of ['treat myself to ice cream 200', 'regular coffee 80', 'with Ravi 500', 'paid with cash 200', 'with card 300', 'with offer 100']) {
+    assert.strictEqual(ctx(t), null, `should not trigger: ${t}`)
+  }
+})
+
+test('several cues that AGREE are a single suggestion', () => {
+  const r = detectSpendingContext('birthday party with friends 2000')
+  assert.strictEqual(r.value, 'social')
+  assert.deepStrictEqual(r.conflict, [])
+})
+
+test('cues that DISAGREE produce no suggestion, only a conflict, listed in vocabulary order', () => {
+  assert.deepStrictEqual(detectSpendingContext('planned dinner with friends 800'), { value: null, source: null, matched: null, conflict: ['planned', 'social'] })
+  assert.deepStrictEqual(detectSpendingContext('social media subscription 199').conflict, ['routine', 'social'])
+  assert.deepStrictEqual(detectSpendingContext('birthday gift monthly suddenly').conflict, ['routine', 'social', 'unplanned'])
+})
+
+test('an explicit #tag wins over every phrase and is marked as the user\'s own', () => {
+  assert.deepStrictEqual(detectSpendingContext('dinner with friends 500 #routine'), { value: 'routine', source: 'tag', matched: '#routine', conflict: [] })
+  assert.strictEqual(detectSpendingContext('coffee #SOCIAL').value, 'social')
+})
+
+test('two different #tags conflict; the same #tag twice is one', () => {
+  assert.deepStrictEqual(detectSpendingContext('coffee #routine #social').conflict, ['routine', 'social'])
+  assert.strictEqual(detectSpendingContext('coffee #routine #routine').value, 'routine')
+})
+
+test('an unknown #tag is ignored', () => {
+  assert.strictEqual(ctx('coffee #treat'), null)
+})
+
+test('non-string input is safe', () => {
+  for (const v of [null, undefined, 42, {}]) assert.strictEqual(ctx(v), null)
+})
+
+test('every context has at least one cue, every cue is complete, and none uses the g flag (shared state)', () => {
+  for (const value of SPENDING_CONTEXT_VALUES) {
+    assert.ok(CONTEXT_CUES[value]?.length > 0, `no cues for ${value}`)
+    for (const cue of CONTEXT_CUES[value]) {
+      assert.ok(cue.label.length > 0)
+      assert.ok(cue.pattern instanceof RegExp && cue.pattern.flags.includes('i') && !cue.pattern.flags.includes('g'), `bad pattern: ${cue.label}`)
+    }
+  }
+})
+
+test('the "what CountWise understands" list is generated from the same rules the parser uses', () => {
+  const hints = contextCueHints()
+  assert.deepStrictEqual(hints.map((h) => h.value), SPENDING_CONTEXT_VALUES)
+  for (const h of hints) {
+    assert.deepStrictEqual(h.examples, CONTEXT_CUES[h.value].map((c) => c.label))
+    assert.strictEqual(h.label, contextLabel(h.value))
   }
 })
 

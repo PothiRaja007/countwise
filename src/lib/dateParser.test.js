@@ -75,5 +75,17 @@ test('a string with no date defaults to the reference date (today)', () => {
   assert.strictEqual(parseDate('coffee 80', REF), '2026-08-25')
 })
 
+
+// ---- Phase G0: relative dates ----
+test('G0 "N days ago" is understood', () => {
+  assert.strictEqual(parseDate('fuel 500 3 days ago', REF), '2026-08-22')
+  assert.strictEqual(parseDate('coffee 80 1 day ago', REF), '2026-08-24')
+})
+
+test('G0 "day before yesterday" is two days back, not yesterday (it contains the word "yesterday")', () => {
+  assert.strictEqual(parseDate('coffee 80 day before yesterday', REF), '2026-08-23')
+  assert.strictEqual(parseDate('coffee 80 yesterday', REF), '2026-08-24') // plain "yesterday" unchanged
+})
+
 console.log(`\n${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)
