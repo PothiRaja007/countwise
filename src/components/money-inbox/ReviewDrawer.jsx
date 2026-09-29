@@ -13,6 +13,11 @@ import Button from '../ui/Button.jsx'
 function deriveDescription(raw) {
   return (raw || '')
     .replace(/₹/g, '')
+    // Strip a shorthand SUFFIX together with its digits (25k, 1.5L, 5 lakhs,
+    // 2 crore) — G0 taught parseAmount to read these, but this regex still
+    // removed only the number, leaving the unit as a stray word ("rent for
+    // 2k" -> "rent for k").
+    .replace(/[\d,]+(?:\.\d+)?\s*(?:k|l|lacs?|lakhs?|crores?)\b/gi, '')
     .replace(/[\d,]+(\.\d+)?/g, '')
     .replace(/\b(rs\.?|rupees)\b/gi, '')
     .replace(/\s+/g, ' ')
