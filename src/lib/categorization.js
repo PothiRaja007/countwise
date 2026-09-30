@@ -194,7 +194,14 @@ export function detectType(text, { hasAmount = true } = {}) {
   const expenseKeywords = ['spent', 'paid', 'bought', 'purchased', 'spend']
   // "got" is no longer a bare income keyword: "got shoes for 2000" is an expense.
   // It counts as income only in the INCOMING patterns above.
-  const incomeKeywords = ['received', 'earned', 'credited', 'salary', 'stipend', 'bonus', 'refund', 'cashback', 'reimburs', 'dividend', 'sold']
+  // 'recieved'/'recieve': one of English's most common misspellings ("i
+  // before e except after c"), added deliberately (G0.1) — not a general
+  // spell-checker, just this one high-frequency case that would otherwise
+  // silently produce a wrong financial record instead of an ugly one.
+  // Deliberately NOT adding the correctly-spelled base form 'receive':
+  // unlike 'received', it's a literal substring of unrelated words like
+  // 'receiver'/'receivable', which would wrongly flip those to income.
+  const incomeKeywords = ['received', 'recieved', 'recieve', 'earned', 'credited', 'salary', 'stipend', 'bonus', 'refund', 'cashback', 'reimburs', 'dividend', 'sold']
 
   // "mom paid for lunch": someone else paid FOR something. That is neither my income nor my
   // expense, so don't pick one: leave the type empty and the review row asks.
@@ -223,33 +230,72 @@ export function detectType(text, { hasAmount = true } = {}) {
 }
 
 /**
- * Match known account names in text. For transfers, resolves direction via
- * "from X to Y". Matching is case-insensitive substring matching against
- * the accountNames list (the user's real account names from Supabase).
+ * Match known accounts in text — by their literal name, or (G0.1) by a
+ * generic payment-method word ("cash", "UPI") resolved via account TYPE
+ * when no name is mentioned. For transfers, resolves direction via
+ * "from X to Y" (name matching only — an alias inside a from/to clause is
+ * not resolved, same as today).
  *
  * @param {string} text
- * @param {string[]} accountNames
+ * @param {{name: string, type: 'wallet'|'bank'}[]} accounts the user's real accounts from Supabase
  * @returns {{fromAccount: string|null, toAccount: string|null, account: string|null}}
  */
 const FROM_TO = /from\s+(.+?)\s+to\s+(.+?)(?:[.,]|$)/
 
-// Every DISTINCT account the text names, in the order it mentions them (G0).
-// A name sitting inside a longer matched name ("SBI" inside "SBI Savings") is one
-// mention, not two.
-function accountMentions(lower, accountNames) {
-  const matches = accountNames
-    .map((name) => ({ name, start: lower.indexOf(name.toLowerCase()), len: name.length }))
-    .filter((m) => m.start >= 0 && m.len > 0)
-  return matches
-    .filter((m) => !matches.some((o) => o !== m && o.len > m.len && m.start >= o.start && m.start + m.len <= o.start + o.len))
-    .sort((a, b) => a.start - b.start)
+// Generic payment-method words people use instead of their account's actual
+// name ("paid in cash", "by UPI") — resolved by ACCOUNT TYPE, not by name
+// (G0.1). A bare word, matched whole-word, so "cash" also covers "hand
+// cash" / "by cash" / "in cash", and "card" also covers "debit card" /
+// "credit card" without needing every phrase spelled out.
+const ACCOUNT_TYPE_ALIAS_WORDS = {
+  wallet: ['cash'],
+  bank: ['upi', 'card', 'net banking', 'netbanking', 'online', 'gpay', 'google pay', 'phonepe', 'paytm'],
 }
 
-export function detectAccounts(text, accountNames = []) {
+function typeAliasesMentioned(lower) {
+  const types = []
+  for (const [type, words] of Object.entries(ACCOUNT_TYPE_ALIAS_WORDS)) {
+    const escaped = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
+    if (words.some((w) => new RegExp(`\\b${escaped(w)}\\b`).test(lower))) types.push(type)
+  }
+  return types
+}
+
+// Every DISTINCT account the text resolves to, in the order the evidence
+// for them appears (G0, extended G0.1). Two ways to resolve one:
+//   1. the account's own NAME is mentioned literally ("coffee 80 wallet") —
+//      tried first, and wins outright if it finds anything;
+//   2. otherwise, a generic payment-method word implies an account TYPE
+//      ("paid in cash" implies type='wallet'). This only ever fires when
+//      no account was named literally, and only resolves to a specific
+//      account when exactly one of the user's accounts has that type —
+//      two wallets (or two bank accounts) makes the alias ambiguous, same
+//      as naming two accounts literally: nothing is picked, and every
+//      matching account is reported so the row can ask instead of guess.
+// `accounts` is {name, type}[]; a name sitting inside a longer matched
+// name ("SBI" inside "SBI Savings") is one mention, not two.
+function accountMentions(lower, accounts) {
+  const byName = accounts
+    .map((a) => ({ name: a.name, start: lower.indexOf(a.name.toLowerCase()), len: a.name.length }))
+    .filter((m) => m.start >= 0 && m.len > 0)
+  const distinct = byName
+    .filter((m) => !byName.some((o) => o !== m && o.len > m.len && m.start >= o.start && m.start + m.len <= o.start + o.len))
+    .sort((a, b) => a.start - b.start)
+  if (distinct.length > 0) return distinct
+
+  const aliasTypes = typeAliasesMentioned(lower)
+  if (aliasTypes.length === 0) return []
+  // Every account whose type matches ANY mentioned alias type, in account-list
+  // order — if the text implies both a wallet and a bank in one clause
+  // ("cash and card"), that is a genuine conflict across every candidate.
+  return accounts.filter((a) => aliasTypes.includes(a.type)).map((a) => ({ name: a.name }))
+}
+
+export function detectAccounts(text, accounts = []) {
   const lower = text.toLowerCase()
   const findAccount = (segment) => {
     const segLower = segment.toLowerCase()
-    return accountNames.find((n) => segLower.includes(n.toLowerCase())) || null
+    return accounts.find((a) => segLower.includes(a.name.toLowerCase()))?.name || null
   }
 
   const fromToMatch = lower.match(FROM_TO)
@@ -261,23 +307,27 @@ export function detectAccounts(text, accountNames = []) {
     }
   }
 
-  // Not a from/to transfer. Naming TWO different accounts ("coffee 80 bank wallet")
-  // is ambiguous, so none is picked: the row asks (G0). Before, whichever came first in
-  // the user's account list was chosen silently. (Return shape unchanged on purpose:
-  // the conflict itself is reported by detectAccountConflict below.)
-  const mentioned = accountMentions(lower, accountNames)
+  // Not a from/to transfer. Naming or implying TWO different accounts
+  // ("coffee 80 bank wallet", or "cash and card" with two matching
+  // accounts) is ambiguous, so none is picked: the row asks (G0). Before,
+  // whichever came first in the user's account list was chosen silently.
+  // (Return shape unchanged on purpose: the conflict itself is reported by
+  // detectAccountConflict below.)
+  const mentioned = accountMentions(lower, accounts)
   return { fromAccount: null, toAccount: null, account: mentioned.length === 1 ? mentioned[0].name : null }
 }
 
 /**
- * The accounts a NON-transfer clause names when it names more than one, in the
- * order typed — otherwise []. Lets the review row say "Bank and Wallet both
- * mentioned" instead of silently choosing one.
+ * The accounts a NON-transfer clause resolves to (by literal name or by a
+ * payment-method alias) when it resolves to more than one, in evidence
+ * order — otherwise []. Lets the review row say "Bank and Wallet both
+ * apply" instead of silently choosing one, whether the ambiguity came from
+ * two names or an alias matching two same-type accounts.
  */
-export function detectAccountConflict(text, accountNames = []) {
+export function detectAccountConflict(text, accounts = []) {
   const lower = text.toLowerCase()
   if (FROM_TO.test(lower)) return []
-  const mentioned = accountMentions(lower, accountNames)
+  const mentioned = accountMentions(lower, accounts)
   return mentioned.length > 1 ? mentioned.map((m) => m.name) : []
 }
 
@@ -365,14 +415,14 @@ export function splitClauses(text) {
  * (but still reviewable) guess.
  *
  * @param {string} text
- * @param {{accountNames?: string[], referenceDate?: Date}} opts
+ * @param {{accounts?: {name: string, type: 'wallet'|'bank'}[], referenceDate?: Date}} opts
  */
-export function parseClause(text, { accountNames = [], referenceDate = new Date() } = {}) {
+export function parseClause(text, { accounts = [], referenceDate = new Date() } = {}) {
   const date = parseDate(text, referenceDate)
   const amount = parseAmount(text)
   const detected = detectType(text, { hasAmount: amount !== null })
   let type = detected.type
-  let { fromAccount, toAccount, account } = detectAccounts(text, accountNames)
+  let { fromAccount, toAccount, account } = detectAccounts(text, accounts)
 
   // A movement INTO a known account with no verb saying otherwise ("put 2000 into
   // wallet") is a transfer whose SOURCE is unknown: flagged for review, never guessed (G0).
@@ -403,7 +453,7 @@ export function parseClause(text, { accountNames = [], referenceDate = new Date(
     type,
     assumedType: detected.assumed,
     account,
-    accountConflict: detectAccountConflict(text, accountNames),
+    accountConflict: detectAccountConflict(text, accounts),
     fromAccount,
     toAccount,
     needsReview,

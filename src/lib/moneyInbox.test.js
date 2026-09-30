@@ -31,12 +31,16 @@ const categoryRules = [
   { keyword: 'fuel', category_id: 'cat-fuel', priority: 0 },
 ]
 
-const accountNames = ['SBI', 'Wallet', 'Bank']
+const accounts = [
+  { name: 'SBI', type: 'bank' },
+  { name: 'Wallet', type: 'wallet' },
+  { name: 'Bank', type: 'bank' },
+]
 
 // ---- buildReviewCandidates: multi-clause input resolves categories ----
 test('buildReviewCandidates splits a multi-transaction message and resolves categories per clause', () => {
   const candidates = buildReviewCandidates('coffee 80, bus 40, salary received 25000', {
-    accountNames,
+    accounts,
     categoryRules,
     referenceDate: REF_DATE,
   })
@@ -60,7 +64,7 @@ test('buildReviewCandidates splits a multi-transaction message and resolves cate
 // ---- buildReviewCandidates: a transfer clause resolves both accounts ----
 test('buildReviewCandidates resolves a transfer clause with both accounts and no category needed', () => {
   const candidates = buildReviewCandidates('moved 2000 from SBI to wallet', {
-    accountNames,
+    accounts,
     categoryRules,
     referenceDate: REF_DATE,
   })
@@ -75,7 +79,7 @@ test('buildReviewCandidates resolves a transfer clause with both accounts and no
 // ---- buildReviewCandidates: unresolved clause is flagged, doesn't block others ----
 test('buildReviewCandidates flags an unresolvable clause without dropping the rest of the batch', () => {
   const candidates = buildReviewCandidates('spent 500 on fuel and moved 300 from SBI to Paytm', {
-    accountNames,
+    accounts,
     categoryRules,
     referenceDate: REF_DATE,
   })
@@ -108,45 +112,45 @@ const DEFAULT_SHAPED_RULES = [
 ]
 
 test('buildReviewCandidates resolves categories using a realistic default-shaped rule set', () => {
-  const [coffee] = buildReviewCandidates('coffee 80', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [coffee] = buildReviewCandidates('coffee 80', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(coffee.categoryId, 'cat-food')
 
-  const [petrol] = buildReviewCandidates('petrol 500', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [petrol] = buildReviewCandidates('petrol 500', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(petrol.categoryId, 'cat-fuel')
 
-  const [salary] = buildReviewCandidates('salary received 25000', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [salary] = buildReviewCandidates('salary received 25000', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(salary.categoryId, 'cat-salary')
 })
 
 test('buildReviewCandidates resolves petrol/fuel/diesel to the Fuel category, split out of Transport', () => {
-  const [petrol] = buildReviewCandidates('petrol 500', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [petrol] = buildReviewCandidates('petrol 500', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(petrol.categoryId, 'cat-fuel')
 
-  const [fuel] = buildReviewCandidates('fuel 500', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [fuel] = buildReviewCandidates('fuel 500', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(fuel.categoryId, 'cat-fuel')
 
-  const [diesel] = buildReviewCandidates('diesel 700', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [diesel] = buildReviewCandidates('diesel 700', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(diesel.categoryId, 'cat-fuel')
 })
 
 test('buildReviewCandidates still resolves remaining Transport keywords correctly after the Fuel split', () => {
-  const [bus] = buildReviewCandidates('bus 40', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [bus] = buildReviewCandidates('bus 40', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(bus.categoryId, 'cat-transport')
 
-  const [uber] = buildReviewCandidates('uber 200', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [uber] = buildReviewCandidates('uber 200', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(uber.categoryId, 'cat-transport')
 })
 
 test('buildReviewCandidates resolves an overlapping keyword pair via priority ("tuition fee" vs "tuition")', () => {
-  const [withFee] = buildReviewCandidates('tuition fee 5000', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [withFee] = buildReviewCandidates('tuition fee 5000', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(withFee.categoryId, 'cat-education', 'the more specific, higher-priority keyword should win')
 
-  const [bare] = buildReviewCandidates('tuition 5000', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [bare] = buildReviewCandidates('tuition 5000', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(bare.categoryId, 'cat-tuition-income', 'without "fee", only the bare keyword matches')
 })
 
 test('buildReviewCandidates leaves a genuinely unmatched item uncategorized, not guessed', () => {
-  const [candidate] = buildReviewCandidates('xyzabc123 300', { accountNames, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
+  const [candidate] = buildReviewCandidates('xyzabc123 300', { accounts, categoryRules: DEFAULT_SHAPED_RULES, referenceDate: REF_DATE })
   assert.strictEqual(candidate.categoryId, null)
 })
 
@@ -158,19 +162,19 @@ test('buildReviewCandidates leaves a genuinely unmatched item uncategorized, not
 // the component calls into, not a reimplementation of it. ----
 
 test('no initialDate equivalent: referenceDate = today, no date word in text → dated today (regression)', () => {
-  const [candidate] = buildReviewCandidates('coffee 80', { accountNames, categoryRules, referenceDate: REF_DATE })
+  const [candidate] = buildReviewCandidates('coffee 80', { accounts, categoryRules, referenceDate: REF_DATE })
   assert.strictEqual(candidate.date, '2026-08-30') // REF_DATE itself
 })
 
 test('initialDate provided, no date word in text → uses initialDate, not real today', () => {
   const calendarDay = new Date(2026, 7, 15) // a different day than REF_DATE
-  const [candidate] = buildReviewCandidates('coffee 80', { accountNames, categoryRules, referenceDate: calendarDay })
+  const [candidate] = buildReviewCandidates('coffee 80', { accounts, categoryRules, referenceDate: calendarDay })
   assert.strictEqual(candidate.date, '2026-08-15')
 })
 
 test('initialDate provided, but text contains an explicit date word → text wins over initialDate', () => {
   const calendarDay = new Date(2026, 7, 15)
-  const [candidate] = buildReviewCandidates('yesterday coffee 80', { accountNames, categoryRules, referenceDate: calendarDay })
+  const [candidate] = buildReviewCandidates('yesterday coffee 80', { accounts, categoryRules, referenceDate: calendarDay })
   // "yesterday" resolves relative to the given reference date (15th), not
   // real today — this is the documented, intentional behavior: initialDate
   // is the single anchor for both "no date mentioned" and relative-date
@@ -180,7 +184,7 @@ test('initialDate provided, but text contains an explicit date word → text win
 
 // ---- checkDuplicate: genuine near-duplicate ----
 test('checkDuplicate flags a same-amount, same-description entry as a likely duplicate', () => {
-  const candidate = buildReviewCandidates('coffee 80', { accountNames, categoryRules, referenceDate: REF_DATE })[0]
+  const candidate = buildReviewCandidates('coffee 80', { accounts, categoryRules, referenceDate: REF_DATE })[0]
   const recentTransactions = [
     { amount: 80, description: 'coffee', created_at: '2026-08-30T10:00:00Z' },
   ]
@@ -193,7 +197,7 @@ test('checkDuplicate flags a same-amount, same-description entry as a likely dup
 
 // ---- checkDuplicate: clearly different transaction, same amount ----
 test('checkDuplicate does not flag a different transaction that happens to share an amount', () => {
-  const candidate = buildReviewCandidates('coffee 80', { accountNames, categoryRules, referenceDate: REF_DATE })[0]
+  const candidate = buildReviewCandidates('coffee 80', { accounts, categoryRules, referenceDate: REF_DATE })[0]
   const recentTransactions = [
     { amount: 80, description: 'bus fare', created_at: '2026-08-30T10:00:00Z' },
   ]
@@ -205,7 +209,7 @@ test('checkDuplicate does not flag a different transaction that happens to share
 
 // ---- checkDuplicate: never blocks — always returns a plain result, no throw ----
 test('checkDuplicate returns false for an empty recent-transactions list', () => {
-  const candidate = buildReviewCandidates('coffee 80', { accountNames, categoryRules, referenceDate: REF_DATE })[0]
+  const candidate = buildReviewCandidates('coffee 80', { accounts, categoryRules, referenceDate: REF_DATE })[0]
   const result = checkDuplicate(candidate, [])
   assert.strictEqual(result.isDuplicate, false)
 })
@@ -216,7 +220,7 @@ test('checkDuplicate returns false for an empty recent-transactions list', () =>
 // ---------------------------------------------------------------------
 
 const rulesWithDinner = [...categoryRules, { keyword: 'dinner', category_id: 'cat-food', priority: 0 }]
-const build = (text) => buildReviewCandidates(text, { accountNames, categoryRules: rulesWithDinner, referenceDate: REF_DATE })
+const build = (text) => buildReviewCandidates(text, { accounts, categoryRules: rulesWithDinner, referenceDate: REF_DATE })
 
 test('the target sentence: "dinner with friends for 500rs paid from bank" -> Food, 500, social, Bank, date', () => {
   const [c, ...rest] = build('dinner with friends for 500rs paid from bank')
@@ -279,7 +283,7 @@ test('backward compatibility: every pre-existing field is exactly what the untou
   for (const text of corpus) {
     const got = build(text)
     const want = splitClauses(text).map((clause) => {
-      const base = parseClause(clause, { accountNames, referenceDate: REF_DATE })
+      const base = parseClause(clause, { accounts, referenceDate: REF_DATE })
       return { ...base, categoryId: matchCategory(base.raw, rulesWithDinner) }
     })
     assert.strictEqual(got.length, want.length, `clause count for ${JSON.stringify(text)}`)

@@ -42,7 +42,15 @@
 // To reproduce a "before" number: check out the commit prior to G0 and run
 // `node src/lib/moneyInboxEval.test.js` against this same corpus.
 
-export const CORPUS_ACCOUNTS = ['SBI', 'Wallet', 'Bank']
+// Two bank-type accounts on purpose (SBI, Bank) — lets the corpus test
+// what happens when a payment-method alias like "card" matches more
+// than one account of the same type (G0.1): it must be a conflict, not
+// a silent guess, the same as naming two accounts literally.
+export const CORPUS_ACCOUNTS = [
+  { name: 'SBI', type: 'bank' },
+  { name: 'Wallet', type: 'wallet' },
+  { name: 'Bank', type: 'bank' },
+]
 export const CORPUS_REFERENCE_DATE = new Date(2026, 8, 28)
 
 // expected-entry builders. `cat` and `ctx` follow the policy above:
@@ -217,7 +225,10 @@ add('context', 'planned dinner with friends 800', [ex(800, null, FOOD, null)]) /
 add('context', 'coffee 80 #routine', [ex(80, null, FOOD, 'routine')])
 add('context', 'treat myself to ice cream 200', [ex(200, null, undefined, null)])
 add('context', 'lunch with Ravi 250', [ex(250, null, FOOD, null)]) // a name is not a relationship word
-add('context', 'paid with cash 200', [ex(200, null, undefined, null)])
+// Account is now Wallet (G0.1's "cash" alias) — this item's purpose is
+// unchanged, though: it still proves "with cash" is not a Social cue (ctx
+// stays null), same as before the alias feature existed.
+add('context', 'paid with cash 200', [ex(200, 'Wallet', undefined, null)])
 add('context', 'social media subscription 199', [ex(199, null, BILLS, null)]) // "social" vs "subscription" disagree
 add('context', 'GF sent me 2000', [inc(2000, null, undefined, null)])
 
@@ -228,8 +239,14 @@ add('accounts', 'paid 500 using wallet not bank', [ex(500, null, undefined, null
 add('accounts', 'lunch 250 bnak', [ex(250, null, FOOD)])
 add('accounts', 'lunch 250 Wallet', [ex(250, 'Wallet', FOOD)])
 add('accounts', 'moved 500 from wallet to bank', [tr(500, 'Wallet', 'Bank', { review: false })])
-add('accounts', 'coffee 80 paid in cash', [ex(80, 'Wallet', FOOD)], 'gap') // needs user-specific aliases (cash -> Wallet)
-add('accounts', 'coffee 80 paid by upi', [ex(80, 'Bank', FOOD)], 'gap') // needs user-specific aliases (upi -> Bank)
+// G0.1: a generic payment-method word resolves to an account by TYPE
+// when no account is named literally. 'Bank' alone would be ambiguous
+// (SBI and Bank are both type='bank'), so these use 'cash' (only one
+// wallet-type account exists) to test the unambiguous case cleanly.
+add('accounts', 'coffee 80 paid in cash', [ex(80, 'Wallet', FOOD)])
+add('accounts', 'coffee 80 hand cash', [ex(80, 'Wallet', FOOD)])
+add('accounts', 'coffee 80 by card', [ex(80, null, FOOD, null, { conflict: ['SBI', 'Bank'] })]) // two bank-type accounts: alias is ambiguous, not guessed
+add('accounts', 'coffee 80 via upi', [ex(80, null, FOOD, null, { conflict: ['SBI', 'Bank'] })])
 
 // ---- keyword traps: category words hiding inside other words -------------------
 add('traps', 'team outing 500', [ex(500, null, FUN, 'social')])

@@ -22,7 +22,7 @@ const RULES = Object.entries(DEFAULT_RULE_KEYWORDS).flatMap(([category, keywords
 
 export function parseForEval(text) {
   return buildReviewCandidates(text, {
-    accountNames: CORPUS_ACCOUNTS,
+    accounts: CORPUS_ACCOUNTS,
     categoryRules: RULES,
     referenceDate: CORPUS_REFERENCE_DATE,
   })

@@ -22,7 +22,11 @@ function test(name, fn) {
 }
 
 const REF = new Date(2026, 7, 25) // 2026-08-25, a Tuesday
-const ACCOUNTS = ['SBI', 'Wallet', 'Bank']
+const ACCOUNTS = [
+  { name: 'SBI', type: 'bank' },
+  { name: 'Wallet', type: 'wallet' },
+  { name: 'Bank', type: 'bank' },
+]
 
 // ---- parseAmount ----
 
@@ -114,7 +118,7 @@ test('splitClauses splits on "and"', () => {
 // ---- parseClause (full orchestration, the real spec examples) ----
 
 test('parseClause: "coffee 80" — assumed expense, today, needs review is false (amount+type both resolved)', () => {
-  const result = parseClause('coffee 80', { accountNames: ACCOUNTS, referenceDate: REF })
+  const result = parseClause('coffee 80', { accounts: ACCOUNTS, referenceDate: REF })
   assert.strictEqual(result.amount, 80)
   assert.strictEqual(result.type, 'expense')
   assert.strictEqual(result.assumedType, true)
@@ -124,7 +128,7 @@ test('parseClause: "coffee 80" — assumed expense, today, needs review is false
 
 test('parseClause: "spent 500 on fuel and received 2500 tuition" — two clauses parsed independently', () => {
   const clauses = splitClauses('spent 500 on fuel and received 2500 tuition')
-  const results = clauses.map((c) => parseClause(c, { accountNames: ACCOUNTS, referenceDate: REF }))
+  const results = clauses.map((c) => parseClause(c, { accounts: ACCOUNTS, referenceDate: REF }))
 
   assert.strictEqual(results[0].amount, 500)
   assert.strictEqual(results[0].type, 'expense')
@@ -136,7 +140,7 @@ test('parseClause: "spent 500 on fuel and received 2500 tuition" — two clauses
 })
 
 test('parseClause: "moved 2000 from SBI to wallet" — transfer with both accounts resolved', () => {
-  const result = parseClause('moved 2000 from SBI to wallet', { accountNames: ACCOUNTS, referenceDate: REF })
+  const result = parseClause('moved 2000 from SBI to wallet', { accounts: ACCOUNTS, referenceDate: REF })
   assert.strictEqual(result.amount, 2000)
   assert.strictEqual(result.type, 'transfer')
   assert.strictEqual(result.fromAccount, 'SBI')
@@ -146,7 +150,7 @@ test('parseClause: "moved 2000 from SBI to wallet" — transfer with both accoun
 
 test('parseClause: "yesterday I spent 500 on fuel and today got 25000 salary" — dates resolved per clause', () => {
   const clauses = splitClauses('yesterday I spent 500 on fuel and today got 25000 salary')
-  const results = clauses.map((c) => parseClause(c, { accountNames: ACCOUNTS, referenceDate: REF }))
+  const results = clauses.map((c) => parseClause(c, { accounts: ACCOUNTS, referenceDate: REF }))
 
   assert.strictEqual(results[0].date, '2026-08-24') // yesterday
   assert.strictEqual(results[0].amount, 500)
@@ -158,7 +162,7 @@ test('parseClause: "yesterday I spent 500 on fuel and today got 25000 salary" �
 })
 
 test('parseClause: a transfer with an unresolvable account is flagged needsReview', () => {
-  const result = parseClause('moved 2000 from SBI to Zelle', { accountNames: ACCOUNTS, referenceDate: REF })
+  const result = parseClause('moved 2000 from SBI to Zelle', { accounts: ACCOUNTS, referenceDate: REF })
   assert.strictEqual(result.type, 'transfer')
   assert.strictEqual(result.toAccount, null) // "Zelle" isn't a known account
   assert.strictEqual(result.needsReview, true)
@@ -276,8 +280,9 @@ test('G0 two accounts named in one non-transfer clause: none is picked, and the 
 test('G0 a single account, a from/to transfer, and nested names are not conflicts', () => {
   assert.deepStrictEqual(detectAccountConflict('coffee 80 wallet', ACCOUNTS), [])
   assert.deepStrictEqual(detectAccountConflict('moved 500 from wallet to bank', ACCOUNTS), [])
-  assert.strictEqual(detectAccounts('paid from SBI Savings', ['SBI', 'SBI Savings']).account, 'SBI Savings')
-  assert.deepStrictEqual(detectAccountConflict('paid from SBI Savings', ['SBI', 'SBI Savings']), [])
+  const nestedNames = [{ name: 'SBI', type: 'bank' }, { name: 'SBI Savings', type: 'bank' }]
+  assert.strictEqual(detectAccounts('paid from SBI Savings', nestedNames).account, 'SBI Savings')
+  assert.deepStrictEqual(detectAccountConflict('paid from SBI Savings', nestedNames), [])
 })
 
 // ---- splitClauses ----
@@ -374,7 +379,7 @@ test('G0 matchCategory: user-defined rules, priorities and multi-word keywords s
 
 // ---- parseClause ----
 test('G0 parseClause: a one-sided top-up is a transfer with an unknown source, flagged for review', () => {
-  const c = parseClause('put 2000 into wallet', { accountNames: ACCOUNTS, referenceDate: REF })
+  const c = parseClause('put 2000 into wallet', { accounts: ACCOUNTS, referenceDate: REF })
   assert.strictEqual(c.type, 'transfer')
   assert.strictEqual(c.toAccount, 'Wallet')
   assert.strictEqual(c.fromAccount, null)
@@ -382,13 +387,13 @@ test('G0 parseClause: a one-sided top-up is a transfer with an unknown source, f
 })
 
 test('G0 parseClause: "paid 500 from bank to Ravi" is an expense from Bank, not a transfer with a lost account', () => {
-  const c = parseClause('paid 500 from bank to Ravi', { accountNames: ACCOUNTS, referenceDate: REF })
+  const c = parseClause('paid 500 from bank to Ravi', { accounts: ACCOUNTS, referenceDate: REF })
   assert.strictEqual(c.type, 'expense')
   assert.strictEqual(c.account, 'Bank')
 })
 
 test('G0 parseClause reports the account conflict and does not pick an account', () => {
-  const c = parseClause('coffee 80 bank wallet', { accountNames: ACCOUNTS, referenceDate: REF })
+  const c = parseClause('coffee 80 bank wallet', { accounts: ACCOUNTS, referenceDate: REF })
   assert.strictEqual(c.account, null)
   assert.deepStrictEqual(c.accountConflict, ['Bank', 'Wallet'])
 })
@@ -398,6 +403,83 @@ test('G0 parseClause flags a guessed amount for review, but not a clear one', ()
   assert.strictEqual(parseClause('coffee 80', { referenceDate: REF }).needsReview, false)
   assert.strictEqual(parseClause('dinner with 5 friends 500', { referenceDate: REF }).needsReview, false)
   assert.strictEqual(parseClause('coffee 80', { referenceDate: REF }).accountConflict.length, 0)
+})
+
+
+// =====================================================================
+// G0.1 — payment-method aliases resolve to an account by TYPE ("cash" ->
+// the wallet-type account, "UPI"/"card" -> a bank-type account) when no
+// account is named literally. Everything above is unchanged.
+// =====================================================================
+
+test('G0.1 "cash" resolves to the one wallet-type account', () => {
+  assert.strictEqual(detectAccounts('coffee 80 paid in cash', ACCOUNTS).account, 'Wallet')
+  assert.strictEqual(detectAccounts('coffee 80 hand cash', ACCOUNTS).account, 'Wallet')
+  assert.strictEqual(detectAccounts('coffee 80 by cash', ACCOUNTS).account, 'Wallet')
+})
+
+test('G0.1 UPI/card/net banking/online/gpay/phonepe/paytm all imply a bank-type account', () => {
+  const oneBank = [{ name: 'Wallet', type: 'wallet' }, { name: 'Bank', type: 'bank' }]
+  for (const t of [
+    'coffee 80 via upi', 'coffee 80 by card', 'coffee 80 debit card', 'coffee 80 credit card',
+    'coffee 80 net banking', 'coffee 80 netbanking', 'coffee 80 paid online',
+    'coffee 80 via gpay', 'coffee 80 via google pay', 'coffee 80 via phonepe', 'coffee 80 via paytm',
+  ]) {
+    assert.strictEqual(detectAccounts(t, oneBank).account, 'Bank', t)
+  }
+})
+
+test('G0.1 a literal account name still wins outright over an alias in the same text', () => {
+  // ACCOUNTS has both SBI (bank) and Wallet — "cash" would imply Wallet, but
+  // "SBI" is named literally, so the literal name is used, not the alias.
+  assert.strictEqual(detectAccounts('coffee 80 paid via SBI in cash', ACCOUNTS).account, 'SBI')
+})
+
+test('G0.1 an alias matching TWO accounts of the same type is a conflict, not a guess', () => {
+  // ACCOUNTS = SBI (bank), Wallet (wallet), Bank (bank) — two bank-type accounts.
+  assert.strictEqual(detectAccounts('coffee 80 by card', ACCOUNTS).account, null)
+  assert.deepStrictEqual(detectAccountConflict('coffee 80 by card', ACCOUNTS), ['SBI', 'Bank'])
+  assert.strictEqual(detectAccounts('coffee 80 via upi', ACCOUNTS).account, null)
+})
+
+test('G0.1 no matching account type: no alias fires, same as today', () => {
+  const walletOnly = [{ name: 'Wallet', type: 'wallet' }]
+  assert.strictEqual(detectAccounts('coffee 80 via upi', walletOnly).account, null)
+  assert.deepStrictEqual(detectAccountConflict('coffee 80 via upi', walletOnly), [])
+})
+
+test('G0.1 mentioning both a wallet alias and a bank alias in one clause is a genuine conflict', () => {
+  const oneEach = [{ name: 'Wallet', type: 'wallet' }, { name: 'Bank', type: 'bank' }]
+  assert.strictEqual(detectAccounts('cash and card both used 80', oneEach).account, null)
+  assert.deepStrictEqual(detectAccountConflict('cash and card both used 80', oneEach), ['Wallet', 'Bank'])
+})
+
+test('G0.1 an alias inside a from/to transfer is not resolved (unchanged scope, same as a bare unmatched name)', () => {
+  const c = detectAccounts('moved 500 from cash to Bank', ACCOUNTS)
+  assert.strictEqual(c.fromAccount, null)
+  assert.strictEqual(c.toAccount, 'Bank')
+})
+
+test('G0.1 near-miss words do not accidentally trigger an alias (whole-word matching)', () => {
+  const oneEach = [{ name: 'Wallet', type: 'wallet' }, { name: 'Bank', type: 'bank' }]
+  for (const t of ['cashew nuts 80', 'discarded old cards 80', 'onliner joke 80']) {
+    assert.strictEqual(detectAccounts(t, oneEach).account, null, t)
+  }
+})
+
+
+// ---- G0.1: the "recieved" typo (i-before-e) is a real, high-frequency ----
+// ---- case worth a targeted fix, without opening the door to fuzzy match --
+test('G0.1 "recieved"/"recieve" (the common typo) are recognized as income, same as the correct spelling', () => {
+  for (const t of ['recieved from mom', 'recieve money from mom', 'mom recieved my payment']) {
+    assert.strictEqual(detectType(t).type, 'income', t)
+  }
+})
+
+test('G0.1 the correctly-spelled base form "receive" is deliberately NOT added: it would wrongly flip unrelated words', () => {
+  for (const t of ['the receiver was busy', 'receivable amount 500', 'receiving guests 500']) {
+    assert.strictEqual(detectType(t).type, 'expense', t)
+  }
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

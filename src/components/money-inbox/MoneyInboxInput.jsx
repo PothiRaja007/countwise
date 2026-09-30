@@ -51,7 +51,10 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       const recentTransactions = recentRes.data || []
 
       const candidates = buildReviewCandidates(text, {
-        accountNames: accounts.map((a) => a.name),
+        // Full {id, name, type} objects — type is what lets a generic word
+        // like "cash" or "UPI" resolve to the right account when no
+        // account is named literally (G0.1).
+        accounts,
         categoryRules,
         // initialDate is a fallback default only, used as the same single
         // reference-date anchor parseDate() already takes — an explicit

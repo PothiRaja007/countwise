@@ -12,13 +12,13 @@ import { detectSpendingContext } from './spendingContext.js'
  * Split a Money Inbox entry into one review candidate per clause.
  *
  * @param {string} text - raw Money Inbox input, e.g. "coffee 80, bus 40, salary received 25000"
- * @param {{accountNames?: string[], categoryRules?: {keyword: string, category_id: string, priority?: number}[], referenceDate?: Date}} opts
+ * @param {{accounts?: {name: string, type: 'wallet'|'bank'}[], categoryRules?: {keyword: string, category_id: string, priority?: number}[], referenceDate?: Date}} opts
  * @returns {Array<ReturnType<typeof parseClause> & {categoryId: string|null}>}
  */
-export function buildReviewCandidates(text, { accountNames = [], categoryRules = [], referenceDate = new Date() } = {}) {
+export function buildReviewCandidates(text, { accounts = [], categoryRules = [], referenceDate = new Date() } = {}) {
   const clauses = splitClauses(text)
   return clauses.map((clause) => {
-    const candidate = parseClause(clause, { accountNames, referenceDate })
+    const candidate = parseClause(clause, { accounts, referenceDate })
     // matchCategory does a lowercase substring match, so matching against
     // the clause's raw text (rather than a separately-extracted
     // description) still finds keywords like "coffee" or "fuel" fine.
