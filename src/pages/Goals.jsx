@@ -3,6 +3,7 @@ import { X, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { goalProgress } from '../lib/financialEngine.js'
+import { goalOpportunity } from '../lib/goalOpportunityEngine.js'
 import PageHeader from '../components/layout/PageHeader.jsx'
 import ErrorState from '../components/layout/ErrorState.jsx'
 import GoalCard from '../components/goals/GoalCard.jsx'
@@ -50,7 +51,7 @@ export default function Goals() {
 
     const [goalsRes, contributionsRes, accountsRes, transactionsRes] = await Promise.all([
       supabase.from('goals').select('id, name, target_amount, target_date, status, updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }),
-      supabase.from('goal_contributions').select('id, goal_id, account_id, amount, type').eq('user_id', user.id),
+      supabase.from('goal_contributions').select('id, goal_id, account_id, amount, type, contribution_date').eq('user_id', user.id),
       supabase.from('accounts').select('id, name, type').eq('user_id', user.id).eq('is_active', true),
       supabase.from('transactions').select('account_id, to_account_id, type, amount, transaction_date').eq('user_id', user.id),
     ])
@@ -79,6 +80,17 @@ export default function Goals() {
     goals.forEach((g) => map.set(g.id, goalProgress(goalContributions, g.id)))
     return map
   }, [goals, goalContributions])
+
+  // Phase 37 — computed once per render from the same already-fetched
+  // contributions/transactions, not a separate fetch. Only for active and
+  // overdue goals (archived/completed have nothing forward-looking to show).
+  const opportunityByGoalId = useMemo(() => {
+    const map = new Map()
+    goals
+      .filter((g) => g.status === 'active')
+      .forEach((g) => map.set(g.id, goalOpportunity({ goal: g, contributions: goalContributions, transactions })))
+    return map
+  }, [goals, goalContributions, transactions])
 
   const activeGoals = useMemo(() => goals.filter((g) => g.status === 'active'), [goals])
   const visibleGoals = useMemo(() => goals.filter((g) => g.status === activeTab), [goals, activeTab])
@@ -191,6 +203,7 @@ export default function Goals() {
               key={goal.id}
               goal={goal}
               currentProgress={progressByGoalId.get(goal.id) || 0}
+              opportunity={opportunityByGoalId.get(goal.id) || null}
               onContribute={() => setActionGoal({ goal, mode: 'contribution' })}
               onWithdraw={() => setActionGoal({ goal, mode: 'withdrawal' })}
               onEdit={() => setEditingGoal(goal)}

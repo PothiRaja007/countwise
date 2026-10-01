@@ -22,7 +22,7 @@ function formatTargetDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export default function GoalCard({ goal, currentProgress, onContribute, onWithdraw, onEdit, onArchive, onReuse }) {
+export default function GoalCard({ goal, currentProgress, opportunity, onContribute, onWithdraw, onEdit, onArchive, onReuse }) {
   const displayStatus = goalStatusLabel(goal)
   const { percent, overage } = progressPercent(currentProgress, goal.target_amount)
   const pace = displayStatus === 'active' || displayStatus === 'overdue' ? suggestedMonthlyPace(goal, currentProgress) : null
@@ -100,6 +100,34 @@ export default function GoalCard({ goal, currentProgress, onContribute, onWithdr
       {pace !== null && pace > 0 && (
         <div className="text-xs text-muted dark:text-mutedDark mt-1.5">
           At this pace, saving <span className="font-mono">{formatCurrency(pace)}</span>/month keeps this goal on track.
+        </div>
+      )}
+
+      {/* Phase 37 — Goal/Savings Opportunity Intelligence. Only for an
+          active or overdue goal with real recent activity to report on;
+          a brand-new goal with nothing in its window has nothing honest
+          to show here yet. Labels are deliberate: OBSERVED is a fact,
+          SCENARIO is explicitly conditional math, never a promise. */}
+      {opportunity && (displayStatus === 'active' || displayStatus === 'overdue') && (
+        <div className="mt-2.5 pt-2.5 border-t border-line dark:border-lineDark space-y-1 text-xs">
+          <div className="text-muted dark:text-mutedDark">
+            <span className="uppercase tracking-wide text-[10px] mr-1.5">Observed</span>
+            Recent pace over the last {opportunity.windowMonths} months:{' '}
+            <span className="font-mono text-ink dark:text-offwhite">{formatCurrency(opportunity.recentMonthlyPace)}</span>/month.
+          </div>
+          {opportunity.projectedCompletionDate && opportunity.remaining > 0 && (
+            <div className="text-muted dark:text-mutedDark">
+              <span className="uppercase tracking-wide text-[10px] mr-1.5 text-gold">Scenario</span>
+              If this pace continues, this goal would be reached around{' '}
+              <span className="font-mono text-ink dark:text-offwhite">{formatTargetDate(opportunity.projectedCompletionDate)}</span> —
+              an estimate from recent activity, not a guarantee.
+            </div>
+          )}
+          <div className="text-muted dark:text-mutedDark">
+            <span className="uppercase tracking-wide text-[10px] mr-1.5">Observed</span>
+            Average net cash flow over the same period:{' '}
+            <span className="font-mono text-ink dark:text-offwhite">{formatCurrency(opportunity.avgMonthlyNetCashFlow)}</span>/month.
+          </div>
         </div>
       )}
     </div>
