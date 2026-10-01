@@ -15,9 +15,13 @@ import {
   Banknote,
   Landmark,
   Coins,
+  ShieldCheck,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { shouldShowWorkSection } from '../lib/lifeStage.js'
+import { supabase } from '../lib/supabaseClient.js'
+import { checkIsAdmin } from '../lib/adminAccess.js'
 import Modal from './ui/Modal.jsx'
 
 // Split the same way Sidebar.jsx's groups are, so WORK can be spliced in
@@ -54,13 +58,24 @@ const LINKS_AFTER_WORK = [
 // expected place to find it on mobile — Settings' own Account section
 // (Phase 15+) will offer it as well once built.
 export default function MoreMenu({ open, onClose, darkMode, onToggleDark }) {
-  const { signOut, profile } = useAuth()
+  const { signOut, profile, user } = useAuth()
+
+  // Phase 39: same async admin check as Sidebar.jsx, same reasoning.
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    if (user) checkIsAdmin(supabase, user.id).then(setIsAdmin)
+  }, [user])
 
   // Same null/undefined-safe call as Sidebar.jsx — profile briefly null on
   // initial load resolves to shouldShowWorkSection(undefined) === false,
   // so WORK simply doesn't render yet rather than flashing then disappearing.
   const showWork = shouldShowWorkSection(profile?.income_type)
-  const links = [...LINKS_BEFORE_WORK, ...(showWork ? WORK_LINKS : []), ...LINKS_AFTER_WORK]
+  const links = [
+    ...LINKS_BEFORE_WORK,
+    ...(showWork ? WORK_LINKS : []),
+    ...LINKS_AFTER_WORK,
+    ...(isAdmin ? [{ to: '/admin/rules', label: 'Rule Assistant', icon: ShieldCheck }] : []),
+  ]
 
   if (!open) return null
 

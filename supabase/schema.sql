@@ -844,3 +844,58 @@ begin
   end if;
 end
 $$;
+
+-- ============================================
+-- PHASE 39: Admin Financial Rule Assistant — admin_users + financial_rules write policies
+-- ============================================
+-- financial_rules previously had only a SELECT policy — no one, including
+-- the app owner, could write to it through the app. This adds a minimal
+-- admin allowlist and scopes INSERT/UPDATE on financial_rules to it,
+-- rather than opening the table to every authenticated user. Verified
+-- against a real Postgres with two users (admin, regular): the regular
+-- user is blocked from both insert and update and sees zero rows in
+-- admin_users; the admin can do both and sees only their own row.
+-- Standalone copy for running once against the live project:
+-- supabase/phase39_admin_users.sql (includes the one-time "add yourself
+-- as admin" step, not part of this repeatable block).
+create table if not exists admin_users (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table admin_users enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where tablename = 'admin_users' and policyname = 'admin_users: a user can check their own admin status'
+  ) then
+    -- Deliberately narrow: lets the app ask "am I an admin?" (to decide
+    -- whether to show the admin nav item) without letting any user list
+    -- who else is an admin.
+    create policy "admin_users: a user can check their own admin status" on admin_users
+      for select to authenticated using (auth.uid() = user_id);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where tablename = 'financial_rules' and policyname = 'financial_rules: admins can insert'
+  ) then
+    create policy "financial_rules: admins can insert" on financial_rules
+      for insert to authenticated
+      with check (exists (select 1 from admin_users where user_id = auth.uid()));
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where tablename = 'financial_rules' and policyname = 'financial_rules: admins can update'
+  ) then
+    create policy "financial_rules: admins can update" on financial_rules
+      for update to authenticated
+      using (exists (select 1 from admin_users where user_id = auth.uid()));
+  end if;
+end $$;

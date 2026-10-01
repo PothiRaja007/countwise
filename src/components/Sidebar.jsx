@@ -17,9 +17,13 @@ import {
   Banknote,
   Landmark,
   Coins,
+  ShieldCheck,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { shouldShowWorkSection } from '../lib/lifeStage.js'
+import { supabase } from '../lib/supabaseClient.js'
+import { checkIsAdmin } from '../lib/adminAccess.js'
 
 // Grouped per the locked CountWise information architecture (Phase 11,
 // extended in Phase 14 per the frozen v1.1 spec §5, extended again in
@@ -90,7 +94,18 @@ const navLinkClasses = ({ isActive }) =>
   }`
 
 export default function Sidebar({ darkMode, onToggleDark }) {
-  const { signOut, profile } = useAuth()
+  const { signOut, profile, user } = useAuth()
+
+  // Phase 39: hidden by default until confirmed true, same
+  // no-flash-of-wrong-content principle as showWork below, just async
+  // (admin status isn't already in the loaded profile the way
+  // income_type is). The real gate is the RLS policy on admin_users/
+  // financial_rules, not this check — this only decides whether to
+  // show the link.
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    if (user) checkIsAdmin(supabase, user.id).then(setIsAdmin)
+  }, [user])
 
   // profile is null on initial load (before AuthContext finishes fetching
   // it) as well as for a genuinely student profile — shouldShowWorkSection()
@@ -106,6 +121,7 @@ export default function Sidebar({ darkMode, onToggleDark }) {
     BASE_GROUPS[2], // GROW
     BASE_GROUPS[3], // INSIGHTS
     BASE_GROUPS[4], // SETTINGS
+    ...(isAdmin ? [{ heading: 'ADMIN', links: [{ to: '/admin/rules', label: 'Rule Assistant', icon: ShieldCheck }] }] : []),
   ]
 
   return (

@@ -6,6 +6,7 @@ import Transactions from './pages/Transactions.jsx'
 import Goals from './pages/Goals.jsx'
 import LearningROI from './pages/LearningROI.jsx'
 import MoneyOptions from './pages/MoneyOptions.jsx'
+import AdminRuleAssistant from './pages/AdminRuleAssistant.jsx'
 import Behavior from './pages/Behavior.jsx'
 import Charts from './pages/Charts.jsx'
 import Calendar from './pages/Calendar.jsx'
@@ -123,6 +124,7 @@ export default function App() {
         <Route path="/budgets" element={<Budgets />} />
         <Route path="/learning" element={<LearningROI />} />
         <Route path="/money-options" element={<MoneyOptions />} />
+        <Route path="/admin/rules" element={<AdminRuleAssistant />} />
         <Route path="/behavior" element={<Behavior />} />
         <Route path="/charts" element={<Charts />} />
         <Route path="/reports" element={<Reports />} />
