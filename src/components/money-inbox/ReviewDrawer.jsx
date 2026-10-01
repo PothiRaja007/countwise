@@ -1,10 +1,12 @@
 import { useId, useState } from 'react'
 import { SPENDING_CONTEXTS, contextForType, contextLabel } from '../../lib/spendingContext.js'
-import { ArrowLeft, X, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, X, AlertTriangle, Sparkles } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { useAuth } from '../../lib/AuthContext.jsx'
 import { formatCurrency } from '../../lib/format.js'
 import { friendlyError } from '../../lib/errorMessages.js'
+import { MONEY_INBOX_FALLBACK_SCHEMA, buildMoneyInboxFallbackPrompt, validateFallbackResult } from '../../lib/moneyInboxFallback.js'
+import AiDisclosure from '../ui/AiDisclosure.jsx'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
 
@@ -214,6 +216,96 @@ function Section({ title, children }) {
   )
 }
 
+// Phase 35 — the deterministic parser found NOTHING for this row (no type,
+// no amount). Optional, opt-in only: the user clicks this per row; nothing
+// is ever called automatically. A successful suggestion fills the same
+// editable fields a person would fill by hand — still reviewed, still
+// requires Confirm, same as every other row.
+function FallbackAiAction({ row, accounts, categories, onChange }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [tried, setTried] = useState(false)
+
+  const handleTry = async () => {
+    setLoading(true)
+    setError(null)
+    const accountNames = accounts.map((a) => a.name)
+    const categoryNames = categories.map((c) => c.name)
+
+    try {
+      const prompt = buildMoneyInboxFallbackPrompt({ raw: row.raw, accountNames, categoryNames })
+      const { data, error: invokeErr } = await supabase.functions.invoke('gemini-explain', {
+        body: { prompt, schema: MONEY_INBOX_FALLBACK_SCHEMA },
+      })
+
+      if (invokeErr) {
+        // Same pattern as every other gemini-explain caller (Phase 34): the
+        // function's own { error, message } body is only reachable through
+        // the wrapped Response, since supabase-js flattens a non-2xx reply
+        // into a generic error otherwise.
+        let serverMessage = null
+        try {
+          const body = await invokeErr.context?.json?.()
+          serverMessage = body?.message || body?.error || null
+        } catch {
+          // no readable body — fall through to the generic message
+        }
+        throw new Error(serverMessage || invokeErr.message)
+      }
+
+      // Untrusted until re-checked: validateFallbackResult re-verifies
+      // account/category against the SAME closed lists given in the
+      // prompt — asking Gemini nicely is not a guarantee it complied.
+      const result = validateFallbackResult(data?.data, { accountNames, categoryNames })
+      setTried(true)
+      if (!result.ok) {
+        setError("Gemini couldn't confidently interpret this line either — you can still fill it in below.")
+        return
+      }
+
+      const accountId = result.account ? accounts.find((a) => a.name === result.account)?.id ?? null : null
+      const categoryId = result.category ? categories.find((c) => c.name === result.category)?.id ?? null : null
+      onChange({
+        amount: result.amount,
+        type: result.type,
+        assumedType: false,
+        accountId,
+        categoryId,
+        aiFallbackNote: result.note,
+      })
+    } catch (err) {
+      setError(friendlyError(err, "Couldn't get a suggestion right now. Please try again."))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mt-1.5">
+      {(!tried || error) && (
+        <>
+          <Button
+            variant="text"
+            onClick={handleTry}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 text-xs"
+          >
+            <Sparkles size={12} />
+            {loading ? 'Asking...' : 'Try AI on this line'}
+          </Button>
+          <AiDisclosure>
+            Sends this line's text to Google's Gemini AI, since the deterministic parser couldn't understand it.
+          </AiDisclosure>
+        </>
+      )}
+      {error && <p className="text-xs text-bad mt-1">{error}</p>}
+      {tried && !error && row.aiFallbackNote && (
+        <p className="text-xs text-muted dark:text-mutedDark mt-1">AI read this as: {row.aiFallbackNote}</p>
+      )}
+    </div>
+  )
+}
+
 function RowEditor({ row, accounts, categories, onChange }) {
   const categoryOptions = categories.filter((c) => c.kind === (row.type === 'income' ? 'income' : 'expense'))
   // Inferred from a phrase (not typed as an explicit #tag) and not yet touched by the user.
@@ -242,7 +334,11 @@ function RowEditor({ row, accounts, categories, onChange }) {
           className="w-24 bg-transparent text-sm font-mono text-right outline-none border-b border-line dark:border-lineDark focus:border-gold"
           placeholder="Amount"
         />
-      </div>
+            </div>
+
+      {row.type == null && row.amount == null && (
+        <FallbackAiAction row={row} accounts={accounts} categories={categories} onChange={onChange} />
+      )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <select

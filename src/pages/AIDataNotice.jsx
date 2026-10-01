@@ -6,14 +6,23 @@ import LegalPageLayout, { LegalSection, FutureNote } from '../components/layout/
 // page promised to be rewritten before any AI feature touched real data;
 // that promise had been broken since Phase 31a.
 //
-// Every present-tense statement below was checked against the code:
+// Updated 1 October 2026 (Phase 35): Money Inbox gained its OWN optional,
+// opt-in AI action, so the line below claiming Money Inbox "never contacts
+// an AI service" became false the moment that shipped and is corrected
+// below. Every present-tense statement here was checked against the code:
 //   - what each feature sends  -> gemini-explain callers in CTCExplorer.jsx,
-//     PFPension.jsx, Salary.jsx, FinancialAssistCard.jsx and the prompt
-//     builders in explainCTC/explainPF/explainSalary/assistNarration.js
+//     PFPension.jsx, Salary.jsx, FinancialAssistCard.jsx, ReviewDrawer.jsx
+//     and the prompt builders in explainCTC/explainPF/explainSalary/
+//     assistNarration/moneyInboxFallback.js
 //   - nothing AI-produced is stored -> component state only; CTC
-//     components are saved only by the existing Save button, after review
-//   - Money Inbox and categorization are still deterministic (Phase 35,
-//     the optional AI fallback, is deliberately not built)
+//     components and Money Inbox transactions are saved only by their
+//     existing Save/Confirm button, after review
+//   - Money Inbox stays deterministic BY DEFAULT; the optional fallback
+//     only ever runs on a row the parser found NOTHING in (no type, no
+//     amount), and only when the user clicks it for that row
+//   - an account/category Gemini returns is re-checked against the user's
+//     own real list before it can appear anywhere -> validateFallbackResult()
+//     in moneyInboxFallback.js, enforced by moneyInboxFallback.test.js
 //   - spending context is never sent -> enforced by a test:
 //     spendingContext.test.js fails if any file that builds or sends an
 //     AI prompt references it
@@ -25,7 +34,7 @@ import LegalPageLayout, { LegalSection, FutureNote } from '../components/layout/
 // one sends, must update this page in the same change.
 export default function AIDataNotice() {
   return (
-    <LegalPageLayout title="AI & Data Processing Notice" lastUpdated="28 September 2026">
+    <LegalPageLayout title="AI & Data Processing Notice" lastUpdated="1 October 2026">
       <LegalSection heading="Where AI is used">
         <p>
           CountWise uses AI in a small number of optional places. In each one, nothing is sent until you
@@ -44,12 +53,21 @@ export default function AIDataNotice() {
             <strong>"Summarise in plain words" in Financial Assist</strong> (on the Behavior Score page).
             The AI writes a short summary of the observations shown above it.
           </li>
+          <li>
+            <strong>"Try AI on this line" in Money Inbox.</strong> Shown only on a line the rule-based
+            parser found nothing usable in at all (no amount, no transaction type). The AI proposes an
+            amount, a type, and — only if it exactly matches one you already have — an account and
+            category. Every proposal still lands in the same editable review row as anything else you
+            type, and nothing is saved until you press Confirm.
+          </li>
         </ul>
         <p>
-          Everything else works without any AI. That includes Money Inbox and categorization: fixed,
-          rule-based code that runs the same way every time and never contacts an AI service. Every figure
-          CountWise calculates comes from that fixed code. Amounts the AI reads from an uploaded document
-          are shown to you as proposals to check, not as facts.
+          Money Inbox and categorization are rule-based, fixed code by default, and stay that way for
+          every line the parser can make sense of — the vast majority of what you type. The one exception
+          is the line above: a line that is otherwise a dead end gets one optional, opt-in AI attempt
+          instead of simply failing. Every figure CountWise calculates comes from that fixed code, never
+          from AI. Amounts the AI reads from an uploaded document, or proposes for an unparseable Money
+          Inbox line, are shown to you as proposals to check, not as facts.
         </p>
       </LegalSection>
 
@@ -69,6 +87,12 @@ export default function AIDataNotice() {
             category names, spending amounts, budget amounts and percentages — plus fixed instructions.
             Your individual transactions are not sent. Sent only when you click the button.
           </li>
+          <li>
+            <strong>Try AI on this line:</strong> only the text of that one line, plus the names of your
+            own accounts and categories (so the AI can only ever pick one that already exists — it is
+            never free to invent one), plus fixed instructions. Sent only when you click "Try AI on this
+            line" for that specific row; every other line you type is never sent anywhere.
+          </li>
         </ul>
       </LegalSection>
 
@@ -80,7 +104,10 @@ export default function AIDataNotice() {
             in your browser, and only the resulting observation sentences are sent — never the transactions
             themselves.
           </li>
-          <li>Anything you type into Money Inbox.</li>
+          <li>
+            Any Money Inbox line the parser already understands — the ordinary case. Only a line that is
+            otherwise a complete dead end, and only after you press "Try AI on this line" for it, is ever sent.
+          </li>
           <li>
             The spending context you may tag on an expense (planned, routine, social or unplanned). It is
             kept with the transaction and is never part of anything sent to an AI.

@@ -51,6 +51,7 @@ test('the scan finds the known AI callers (the guard is not vacuous)', () => {
   const names = callers.map((f) => relative(SRC, f).replace(/\\/g, '/')).sort()
   for (const expected of [
     'components/assist/FinancialAssistCard.jsx',
+    'components/money-inbox/ReviewDrawer.jsx',
     'pages/CTCExplorer.jsx',
     'pages/PFPension.jsx',
     'pages/Salary.jsx',
