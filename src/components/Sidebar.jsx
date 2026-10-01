@@ -8,6 +8,7 @@ import {
   GraduationCap,
   Star,
   BarChart2,
+  Sparkles,
   FileText,
   Settings,
   Moon,
@@ -62,6 +63,7 @@ const BASE_GROUPS = [
       { to: '/behavior', label: 'Behavior Score', icon: Star },
       { to: '/charts', label: 'Charts', icon: BarChart2 },
       { to: '/reports', label: 'Reports', icon: FileText },
+      { to: '/insights', label: 'Advanced Insights', icon: Sparkles },
     ],
   },
   {

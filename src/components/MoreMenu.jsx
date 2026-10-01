@@ -5,6 +5,7 @@ import {
   PiggyBank,
   Star,
   BarChart2,
+  Sparkles,
   FileText,
   Settings,
   Moon,
@@ -49,6 +50,7 @@ const LINKS_AFTER_WORK = [
   { to: '/behavior', label: 'Behavior Score', icon: Star },
   { to: '/charts', label: 'Charts', icon: BarChart2 },
   { to: '/reports', label: 'Reports', icon: FileText },
+  { to: '/insights', label: 'Advanced Insights', icon: Sparkles },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 

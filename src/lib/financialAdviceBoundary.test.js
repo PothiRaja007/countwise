@@ -50,7 +50,7 @@ test('the known gemini-explain callers are all found (the guard is not vacuous)'
   const names = callers.map((f) => relative(SRC, f).replace(/\\/g, '/'))
   for (const expected of [
     'pages/PFPension.jsx', 'pages/Salary.jsx', 'pages/CTCExplorer.jsx',
-    'components/assist/FinancialAssistCard.jsx', 'components/money-inbox/ReviewDrawer.jsx',
+    'components/assist/FinancialAssistCard.jsx', 'components/money-inbox/ReviewDrawer.jsx', 'pages/AdvancedInsights.jsx',
   ]) {
     assert.ok(names.includes(expected), `missing ${expected}`)
   }
@@ -69,7 +69,7 @@ test('every gemini-explain caller that free-form-DISPLAYS text validates it firs
     const displaysFreeText = /set(Explanation|Summary)\(/.test(text)
     if (!displaysFreeText) continue // a structured-field caller, different rule applies
     assert.ok(
-      /validateExplanation\(|validateNarration\(/.test(text),
+      /validateExplanation\(|validateNarration\(|validateAdvancedInsights\(/.test(text),
       `${rel} displays free-form AI text via setExplanation/setSummary but never calls validateExplanation or validateNarration`
     )
   }

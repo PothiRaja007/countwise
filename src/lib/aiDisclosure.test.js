@@ -52,6 +52,7 @@ test('the scan finds the known AI callers (the guard is not vacuous)', () => {
   for (const expected of [
     'components/assist/FinancialAssistCard.jsx',
     'components/money-inbox/ReviewDrawer.jsx',
+    'pages/AdvancedInsights.jsx',
     'pages/CTCExplorer.jsx',
     'pages/PFPension.jsx',
     'pages/Salary.jsx',
