@@ -14,6 +14,7 @@ import {
   Briefcase,
   Banknote,
   Landmark,
+  Coins,
 } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { shouldShowWorkSection } from '../lib/lifeStage.js'
@@ -40,6 +41,7 @@ const WORK_LINKS = [
 
 const LINKS_AFTER_WORK = [
   { to: '/learning', label: 'Learning ROI', icon: GraduationCap },
+  { to: '/money-options', label: 'Money Options', icon: Coins },
   { to: '/behavior', label: 'Behavior Score', icon: Star },
   { to: '/charts', label: 'Charts', icon: BarChart2 },
   { to: '/reports', label: 'Reports', icon: FileText },

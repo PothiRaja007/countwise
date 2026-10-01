@@ -16,6 +16,7 @@ import {
   Briefcase,
   Banknote,
   Landmark,
+  Coins,
 } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { shouldShowWorkSection } from '../lib/lifeStage.js'
@@ -46,7 +47,10 @@ const BASE_GROUPS = [
   },
   {
     heading: 'GROW',
-    links: [{ to: '/learning', label: 'Learning ROI', icon: GraduationCap }],
+    links: [
+      { to: '/learning', label: 'Learning ROI', icon: GraduationCap },
+      { to: '/money-options', label: 'Money Options', icon: Coins },
+    ],
   },
   {
     heading: 'INSIGHTS',
