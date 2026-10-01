@@ -61,18 +61,21 @@ export const FAMILY_GROUPS = [
       { category: 'Education', items: pool(
         ['a notebook set', 'a lab manual', 'drawing supplies', 'a reference guide', 'graph sheets'],
         ['a calculator', 'a dictionary']) },
+      { category: 'Transport', items: pool(
+        ['a ride to college', 'a lift to work', 'a commute payment', 'a trip to college', 'a shared ride'],
+        ['a quick hop across town']) },
       { category: 'Other', items: pool(
         ['a repair job', 'a service charge', 'a small fix', 'an odd job payment'],
         ['a misc errand', 'a one-off task']) },
       { category: 'Fuel', items: pool(
-        ['a bike top-up', 'a tank fill-up', 'a two-wheeler top-up', 'a pump stop'],
-        ['a vehicle fill-up']) },
+        ['a bike top-up', 'a tank fill-up', 'a two-wheeler top-up', 'a pump stop', 'a scooter top-up', 'a full tank'],
+        ['a vehicle fill-up', 'a station stop']) },
       { category: 'Rent', items: pool(
-        ['the monthly house payment', 'the landlord payment', 'the flat payment for the month', "the owner's payment"],
-        ['the monthly place payment']) },
+        ['the monthly house payment', 'the landlord payment', 'the flat payment for the month', "the owner's payment", 'the room payment for the month', 'the place payment'],
+        ['the monthly place payment', 'the accommodation payment']) },
       { category: 'Bills & Utilities', items: pool(
-        ['the power bill', 'the current bill', 'the utility payment', 'the apartment maintenance charge'],
-        ['the society maintenance charge']) },
+        ['the power bill', 'the current bill', 'the utility payment', 'the apartment maintenance charge', 'the housing service charge', 'the monthly utility charge'],
+        ['the society maintenance charge', 'the building service payment']) },
       // These three categories otherwise exist ONLY inside routine_purchase,
       // which is the entire family group held out for structural-generalization
       // testing. Without a train-side presence, the model would never see a
@@ -82,14 +85,14 @@ export const FAMILY_GROUPS = [
       // to measure. Different items from routine_purchase's own, so the two
       // groups don't just repeat each other's vocabulary.
       { category: 'Subscriptions', items: pool(
-        ['a streaming plan', 'a cloud storage plan', 'a reading app plan'],
-        ['a video app plan']) },
+        ['a streaming plan', 'a cloud storage plan', 'a reading app plan', 'a music app plan renewal', 'an app membership'],
+        ['a video app plan', 'a news app plan']) },
       { category: 'Wi-Fi/Internet', items: pool(
-        ['the router connection', 'the home connection bill'],
-        ['the broadband connection charge']) },
+        ['the router connection', 'the home connection bill', 'the line rental payment', 'the connection charge'],
+        ['the broadband connection charge', 'the household connection fee']) },
       { category: 'Mobile Recharge', items: pool(
-        ['a data top-up', 'a phone top-up'],
-        ['a number top-up']) },
+        ['a data top-up', 'a phone top-up', 'a plan renewal', 'a number top-up for the month'],
+        ['a number top-up', 'a line top-up']) },
     ],
   },
   // ------------------------------------------------------------------
@@ -176,17 +179,40 @@ export const FAMILY_GROUPS = [
     templates: ['{item} {amount}', 'today, {item}, {amount}'],
     targets: [
       { category: 'Salary', items: pool(
-          ['my pay got credited', 'office credited my pay for the month', 'the company credited this month pay', 'my pay was credited today', 'received my pay for the month'],
-          ['work credited my pay early this time', 'the firm credited this cycle pay']) },
+          ['my pay got credited', 'office credited my pay for the month', 'the company credited this month pay', 'my pay was credited today', 'received my pay for the month', 'the firm credited my monthly pay', 'received this month\'s earnings'],
+          ['work credited my pay early this time', 'the firm credited this cycle pay', 'received my earnings for the cycle']) },
       { category: 'Tuition/Freelance income', items: pool(
-          ['received payment for the design work', 'earned money from the gig', 'the client credited payment for the assignment', 'received money for the project work', 'earned this from a side gig'],
-          ['received money for the project I finished', 'earned money for the extra work']) },
+          ['received payment for the design work', 'earned money from the gig', 'the client credited payment for the assignment', 'received money for the project work', 'earned this from a side gig', 'received payment for the extra work', 'earned money helping with a project'],
+          ['received money for the project I finished', 'earned money for the extra work', 'received payment for the side task']) },
       { category: 'Allowance', items: pool(
-          ['received money from dad for the week', 'my parents credited money for expenses', 'received some money from home', 'received weekly money from home', 'mom credited some money for expenses'],
-          ['received extra money from home this week', 'received some money from family']) },
+          ['received money from dad for the week', 'my parents credited money for expenses', 'received some money from home', 'received weekly money from home', 'mom credited some money for expenses', 'received the usual money from home', 'dad credited some money for the week'],
+          ['received extra money from home this week', 'received some money from family', 'received weekly money from parents']) },
       { category: 'Other income', items: pool(
-          ['received an unexpected refund', 'got money credited back unexpectedly', 'earned some money unexpectedly', 'received money back from a return', 'earned a bit extra unexpectedly'],
-          ['received a surprise refund today', 'earned some unplanned extra money']) },
+          ['received an unexpected refund', 'got money credited back unexpectedly', 'earned some money unexpectedly', 'received money back from a return', 'earned a bit extra unexpectedly', 'received some money back from a friend', 'earned a small amount unexpectedly'],
+          ['received a surprise refund today', 'earned some unplanned extra money', 'received an unplanned amount back']) },
+    ],
+  },
+  // ------------------------------------------------------------------
+  {
+    id: 'indirect_description',
+    description: 'The category is implied, not named or item-specific — the weakest-signal, hardest-to-classify family here on purpose, added for real structural diversity beyond the first six groups.',
+    templates: [
+      '{item} {amount}',
+      'went for {item} {amount}',
+    ],
+    targets: [
+      { category: 'Food', items: pool(
+        ['a quick bite', 'something to eat', 'a little something to eat', 'a small snack run'],
+        ['a bite on the way home']) },
+      { category: 'Shopping', items: pool(
+        ['new stuff', 'something new', 'a little something for myself'],
+        ['a few new things']) },
+      { category: 'Transport', items: pool(
+        ['a way to get around', 'a way to get to college'],
+        ['a way to get back home']) },
+      { category: 'Entertainment', items: pool(
+        ['a bit of fun', 'some downtime', 'a little entertainment'],
+        ['a way to unwind']) },
     ],
   },
 ]

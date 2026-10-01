@@ -67,7 +67,15 @@ function* slotCombinations(target, vocabPick, amountPick) {
  * validated against ALL_LIVE_RULES; a hit means "excluded", not
  * "mislabelled" — design v2 Section 6.
  */
-function generateForGroup(group, { vocabPick, amountPick, split, splitReason, maxPerTargetTemplate = 6 }) {
+// Self-balancing cap: aim for roughly TARGET_PER_TARGET examples per
+// (category x vocab/amount-pick combination), spread across however many
+// templates that family happens to have — not a flat per-template cap,
+// which silently starved a family with few templates (income_paraphrase,
+// 2 templates) even after its vocabulary pool was deliberately deepened.
+const TARGET_PER_TARGET = 24
+
+function generateForGroup(group, { vocabPick, amountPick, split, splitReason }) {
+  const maxPerTargetTemplate = Math.max(4, Math.ceil(TARGET_PER_TARGET / group.templates.length))
   const rows = []
   const excluded = []
   for (const target of group.targets) {

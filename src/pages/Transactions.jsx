@@ -14,6 +14,7 @@ import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import StatementImportModal from '../components/statement/StatementImportModal.jsx'
 import { SPENDING_CONTEXTS, contextLabel, contextDescription, contextForType } from '../lib/spendingContext.js'
 
 // Wide enough to include every row already scoped by filterTransactions —
@@ -39,6 +40,7 @@ export default function Transactions() {
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
 
+  const [showImport, setShowImport] = useState(false)
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [sortBy, setSortBy] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
@@ -135,6 +137,25 @@ export default function Transactions() {
   return (
     <div className="p-6 sm:p-8 space-y-6 bg-paper dark:bg-charcoal min-h-screen">
       <PageHeader name={profile?.username} />
+
+      {accounts.length > 0 && (
+        <div className="flex justify-end -mt-2">
+          <Button variant="text" onClick={() => setShowImport(true)} className="text-sm">
+            Import bank statement (CSV)
+          </Button>
+        </div>
+      )}
+
+      {showImport && (
+        <StatementImportModal
+          accounts={accounts}
+          categories={categories}
+          onClose={() => {
+            setShowImport(false)
+            load()
+          }}
+        />
+      )}
 
       {error && <ErrorState message={error} onRetry={load} />}
 
