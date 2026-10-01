@@ -60,5 +60,5 @@ Estimated annual gross: ${formattedGrossAnnual}. ${grossAssumption}
 
 Estimated monthly take-home: ${formattedMonthlyTakeHome}. ${takeHomeAssumptionText}
 
-Explain in plain, simple language what this CTC breakdown means for someone who has never seen one before, in 2-3 short sentences. Do not introduce any numbers other than the ones given above.`
+Explain in plain, simple language what this CTC breakdown means for someone who has never seen one before, in 2-3 short sentences. Do not introduce any numbers other than the ones given above. Do not give advice, suggestions, or recommendations. Do not use words like guarantee, promise, definitely, or risk-free. Do not mention investing, buying, or selling anything.`
 }

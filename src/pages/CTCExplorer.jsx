@@ -8,6 +8,7 @@ import ErrorState from '../components/layout/ErrorState.jsx'
 import { sumByCategory, estimatedGrossAnnual, estimatedMonthlyTakeHome, hasIncompleteComponents } from '../lib/ctcEngine.js'
 import { CTC_EXTRACTION_SCHEMA, CTC_EXTRACTION_PROMPT, validateExtractedComponents } from '../lib/ctcExtraction.js'
 import { buildCTCExplanationPrompt, CTC_EXPLANATION_SCHEMA } from '../lib/explainCTC.js'
+import { validateExplanation } from '../lib/explanationSafety.js'
 import { friendlyError } from '../lib/errorMessages.js'
 import { parseAmountInput } from '../lib/amountParser.js'
 import ValueBadge from '../components/ui/ValueBadge.jsx'
@@ -201,10 +202,19 @@ function ExplainAction({ totals, gross, takeHome }) {
       }
 
       const text = data?.data?.explanation
-      if (typeof text !== 'string' || text.trim().length === 0) {
-        throw new Error('gemini-explain returned no explanation text')
+      // Phase 38 audit finding: this used to display Gemini's text
+      // verbatim with no content check at all. Now validated the same
+      // way Financial Assist's narration always has been — discarded,
+      // not shown, if it slips in advice, certainty, or investment
+      // language despite the prompt's own instruction not to.
+      const check = validateExplanation(text)
+      if (!check.ok) {
+        // eslint-disable-next-line no-console
+        console.error('Explanation discarded by validation:', check.reason)
+        setError("Couldn't produce a reliable explanation this time. The figures above are unchanged.")
+        return
       }
-      setExplanation(text)
+      setExplanation(text.trim())
     } catch (err) {
       setError(friendlyError(err, "Couldn't get an explanation right now. Please try again."))
     } finally {

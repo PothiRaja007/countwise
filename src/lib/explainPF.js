@@ -51,5 +51,5 @@ export function buildPFExplanationPrompt({ label, formattedAmount, rateUsed, eff
 
   return `${label} contribution: ${formattedAmount}, calculated at a rate of ${rateUsed}%, ${periodText}, sourced from ${sourceLabel}.
 
-Explain in plain, simple language what this means for someone who has never seen a PF breakdown before, in 2-3 short sentences. Do not introduce any numbers other than the ones given above.`
+Explain in plain, simple language what this means for someone who has never seen a PF breakdown before, in 2-3 short sentences. Do not introduce any numbers other than the ones given above. Do not give advice, suggestions, or recommendations. Do not use words like guarantee, promise, definitely, or risk-free. Do not mention investing, buying, or selling anything.`
 }

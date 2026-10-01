@@ -65,5 +65,5 @@ Estimated monthly gross: ${formattedGrossMonthly}. ${grossAssumption}
 
 Estimated monthly take-home: ${formattedTakeHomeMonthly}. ${takeHomeAssumption}
 
-Explain in plain, simple language what this salary breakdown means for someone seeing it for the first time, in 2-3 short sentences. Do not introduce any numbers other than the ones given above.`
+Explain in plain, simple language what this salary breakdown means for someone seeing it for the first time, in 2-3 short sentences. Do not introduce any numbers other than the ones given above. Do not give advice, suggestions, or recommendations. Do not use words like guarantee, promise, definitely, or risk-free. Do not mention investing, buying, or selling anything.`
 }
