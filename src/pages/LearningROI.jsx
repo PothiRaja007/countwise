@@ -11,6 +11,8 @@ import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import CareerAreas from '../components/learning/CareerAreas.jsx'
+import { careerAreasFor, CAREER_AREAS_NOTE } from '../lib/learningCareerAreas.js'
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -291,6 +293,10 @@ export default function Learning() {
             ))}
           </div>
         )}
+
+        {visibleItems.some((item) => careerAreasFor(item)) && (
+          <p className="mt-4 text-xs text-muted dark:text-mutedDark">{CAREER_AREAS_NOTE}</p>
+        )}
       </div>
 
       {formOpen && (
@@ -352,6 +358,8 @@ function LearningRow({ item, onEdit, onDelete }) {
             </span>
           )}
         </div>
+
+        <CareerAreas item={item} />
       </div>
 
       <div className="w-full">

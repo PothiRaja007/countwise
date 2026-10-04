@@ -16,7 +16,23 @@ import { useEffect, useRef } from 'react'
 // handled by comparing the click's target to the dialog element itself —
 // the same test the old stopPropagation-on-the-inner-card pattern achieved
 // manually, so callers keep that stopPropagation unchanged too.
-const BASE_RESET = 'm-0 p-0 border-0 max-w-none max-h-none w-full h-full'
+// `!m-0` is deliberately important. A dialog rendered inside a page wrapper
+// that uses `space-y-*` (Goals, Budgets, Transactions...) matches
+// `.space-y-6 > :not([hidden]) ~ :not([hidden])`, a selector with MORE
+// specificity than a plain `.m-0`, so the dialog picked up a 24px top margin.
+// The full-screen overlay then started 24px down the page, leaving an
+// undimmed strip across the top that looked like a separate box. A dialog is
+// a fixed full-screen overlay and must never take a margin from its parent.
+const BASE_RESET = '!m-0 p-0 border-0 max-w-none max-h-none w-full h-full'
+
+// A <dialog> sets its own `color` (the browser default, black), so it does NOT
+// inherit the page's dark-mode text color: every title, label and typed input
+// value inside it (inputs inherit color via Tailwind's reset) came out black on
+// a dark panel. Dark mode only on purpose — light mode is unchanged. Anything
+// that sets its own text color keeps it, because a more specific element
+// class always beats the inherited value. `color-scheme: dark` also makes the
+// native date-picker icon, scrollbars and dropdown lists dark-aware.
+const DARK_MODE_TEXT = 'dark:text-offwhite dark:[color-scheme:dark]'
 
 // A <dialog> defaults to an opaque browser-supplied background. Callers that
 // set their own (bg-black/40 etc.) must keep it, so the transparent reset is
@@ -78,7 +94,7 @@ export default function Modal({ onClose, className = '', titleId, label, childre
       aria-labelledby={titleId}
       aria-label={titleId ? undefined : label}
       onClick={handleClick}
-      className={`${BASE_RESET} ${hasOwnBackground(className) ? '' : 'bg-transparent'} ${className}`.replace(/\s+/g, ' ').trim()}
+      className={`${BASE_RESET} ${DARK_MODE_TEXT} ${hasOwnBackground(className) ? '' : 'bg-transparent'} ${className}`.replace(/\s+/g, ' ').trim()}
     >
       {children}
     </dialog>
