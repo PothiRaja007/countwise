@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AppShell from './components/layout/AppShell.jsx'
 import Overview from './pages/Overview.jsx'
 import Transactions from './pages/Transactions.jsx'
@@ -23,6 +23,14 @@ import ResetPassword from './pages/ResetPassword.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import TermsAndConditions from './pages/TermsAndConditions.jsx'
 import AIDataNotice from './pages/AIDataNotice.jsx'
+// Phase 41 - first-access flow (see supabase/phase41_user_access.sql)
+import WelcomeHome from './pages/WelcomeHome.jsx'
+import FirstRun from './pages/FirstRun.jsx'
+import AccessError from './pages/AccessError.jsx'
+import InstallInApp from './pages/InstallInApp.jsx'
+import { PublicInstall, PublicThankYou } from './pages/PublicAccessPages.jsx'
+import { useAccessStage } from './lib/useAccessStage.js'
+import { useFreshSignIn, clearFreshSignIn } from './lib/freshSignIn.js'
 import { useAuth } from './lib/AuthContext.jsx'
 import { supabase } from './lib/supabaseClient.js'
 
@@ -37,6 +45,9 @@ const PUBLIC_PAGES = {
   '/privacy': PrivacyPolicy,
   '/terms': TermsAndConditions,
   '/ai-data-notice': AIDataNotice,
+  // Phase 41: the Install and Thank You pages need no account either.
+  '/install': PublicInstall,
+  '/thank-you': PublicThankYou,
 }
 
 export default function App() {
@@ -44,6 +55,18 @@ export default function App() {
   const [themeLoaded, setThemeLoaded] = useState(false)
   const { session, profile, user, loading, passwordRecovery } = useAuth()
   const location = useLocation()
+
+  // Phase 41: is this account NEW (no user_access row) or RETURNING? Called here, before
+  // any early return, because hooks must run in the same order on every render.
+  // `freshSignIn` = the user signed in during this browser session and has not yet
+  // pressed "Go to app" (set by Login.jsx). `accessBypassed` lets someone past a
+  // failed lookup so a database hiccup can never lock them out of their app.
+  const access = useAccessStage(user?.id)
+  const freshSignIn = useFreshSignIn()
+  const [accessBypassed, setAccessBypassed] = useState(false)
+  useEffect(() => {
+    setAccessBypassed(false)
+  }, [user?.id])
 
   // Resets immediately on any identity change — including sign-out, where
   // user becomes null — so a stale themeLoaded=true from the previous
@@ -111,6 +134,28 @@ export default function App() {
     return <Login />
   }
 
+  // Phase 41 - first-access gate. Order matters:
+  //   waiting -> error -> NEW account -> returning account right after sign-in -> existing gates
+  if (access.status === 'idle' || access.status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+        Loading...
+      </div>
+    )
+  }
+
+  if (access.status === 'error' && !accessBypassed) {
+    return <AccessError onRetry={access.retry} onContinue={() => setAccessBypassed(true)} />
+  }
+
+  if (access.status === 'new') {
+    return <FirstRun access={access} />
+  }
+
+  if (access.status === 'returning' && freshSignIn) {
+    return <WelcomeHome mode="returning" onGoToApp={clearFreshSignIn} />
+  }
+
   if (!profile?.onboarding_complete) {
     return <Onboarding />
   }
@@ -139,6 +184,10 @@ export default function App() {
         <Route path="/ctc-explorer" element={<CTCExplorer />} />
         <Route path="/salary" element={<Salary />} />
         <Route path="/pf-pension" element={<PFPension />} />
+        {/* Phase 41: Install CountWise inside the app (sidebar / More menu entry, web users only). */}
+        <Route path="/get-app" element={<InstallInApp />} />
+        {/* Phase 41: after the first-time flow finishes, a stale /welcome address goes home. */}
+        <Route path="/welcome/*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
   )

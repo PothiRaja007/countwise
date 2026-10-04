@@ -26,6 +26,7 @@ const MORE_ROUTES = [
   '/charts',
   '/reports',
   '/settings',
+  '/get-app',
 ]
 
 // Mobile-only bottom navigation (Phase 11). Replaces Sidebar below the md

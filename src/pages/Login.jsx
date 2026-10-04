@@ -6,6 +6,8 @@ import { validatePassword, PASSWORD_RULE_LABELS } from '../lib/passwordRules.js'
 import { friendlyError } from '../lib/errorMessages.js'
 import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
+import { markOAuthLogin, clearOAuthLogin } from '../lib/oauthLoginFlag.js'
+import { markFreshSignIn, clearFreshSignIn } from '../lib/freshSignIn.js'
 
 // Standard multicolour Google "G" (decorative; the button text carries the meaning).
 function GoogleIcon() {
@@ -59,8 +61,10 @@ export default function Login() {
         setInfo('Account created. Check your email to confirm, then sign in.')
         setMode('signin')
       } else {
+        clearOAuthLogin() // a password login must never inherit a stale Google mark
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
         if (signInErr) throw signInErr
+        markFreshSignIn() // Phase 41: show the CountWise Home page once after this sign-in
         // On success, onAuthStateChange in AuthContext handles the redirect.
 
         // Subphase 23A.2 — best-effort "new sign-in" notification. Fired
@@ -88,6 +92,8 @@ export default function Login() {
     setOauthLoading(true)
     setError(null)
     setInfo(null)
+    markOAuthLogin()
+    markFreshSignIn() // survives the trip to Google and back (sessionStorage)
     const { error: oauthErr } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -98,6 +104,8 @@ export default function Login() {
     if (oauthErr) {
       // eslint-disable-next-line no-console
       console.error(oauthErr)
+      clearOAuthLogin()
+      clearFreshSignIn()
       setError(friendlyError(oauthErr, 'Could not start Google sign-in. Please try again.'))
       setOauthLoading(false)
     }

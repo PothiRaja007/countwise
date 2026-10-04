@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { consumeOAuthLogin } from './oauthLoginFlag'
 
 const AuthContext = createContext(null)
 
@@ -44,6 +45,19 @@ export function AuthProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
       setSession(session)
+
+      // Google sign-in returns here as a SIGNED_IN event. Password logins send
+      // their "new sign-in" notification from Login.jsx; this does the same for
+      // Google, once, only when Login.jsx marked a Google sign-in as started.
+      // Deferred with setTimeout so no Supabase call runs inside this callback.
+      if (event === 'SIGNED_IN' && consumeOAuthLogin()) {
+        setTimeout(() => {
+          supabase.functions.invoke('notify-login').catch((notifyErr) => {
+            // eslint-disable-next-line no-console
+            console.error('notify-login failed (non-blocking):', notifyErr)
+          })
+        }, 0)
+      }
 
       // Bug fix: USER_UPDATED fires from supabase.auth.updateUser() — in
       // this app, that's exclusively ResetPassword.jsx's password change

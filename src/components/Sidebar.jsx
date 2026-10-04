@@ -19,12 +19,14 @@ import {
   Landmark,
   Coins,
   ShieldCheck,
+  Download,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/AuthContext.jsx'
 import { shouldShowWorkSection } from '../lib/lifeStage.js'
 import { supabase } from '../lib/supabaseClient.js'
 import { checkIsAdmin } from '../lib/adminAccess.js'
+import { useInstallState } from '../lib/installPrompt.js'
 
 // Grouped per the locked CountWise information architecture (Phase 11,
 // extended in Phase 14 per the frozen v1.1 spec §5, extended again in
@@ -88,6 +90,13 @@ const WORK_GROUP = {
   ],
 }
 
+// Phase 41: shown only to people using CountWise in a browser. Anyone already
+// running the installed app never sees it (see `standalone` in the component).
+const INSTALL_GROUP = {
+  heading: 'GET THE APP',
+  links: [{ to: '/get-app', label: 'Install CountWise', icon: Download }],
+}
+
 const navLinkClasses = ({ isActive }) =>
   `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
     isActive
@@ -97,6 +106,7 @@ const navLinkClasses = ({ isActive }) =>
 
 export default function Sidebar({ darkMode, onToggleDark }) {
   const { signOut, profile, user } = useAuth()
+  const { standalone } = useInstallState()
 
   // Phase 39: hidden by default until confirmed true, same
   // no-flash-of-wrong-content principle as showWork below, just async
@@ -123,6 +133,7 @@ export default function Sidebar({ darkMode, onToggleDark }) {
     BASE_GROUPS[2], // GROW
     BASE_GROUPS[3], // INSIGHTS
     BASE_GROUPS[4], // SETTINGS
+    ...(standalone ? [] : [INSTALL_GROUP]),
     ...(isAdmin ? [{ heading: 'ADMIN', links: [{ to: '/admin/rules', label: 'Rule Assistant', icon: ShieldCheck }] }] : []),
   ]
 

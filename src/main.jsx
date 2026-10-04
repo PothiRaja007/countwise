@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { AuthProvider } from './lib/AuthContext.jsx'
 import './index.css'
+// Phase 41: start listening for the browser's install prompt immediately.
+import './lib/installPrompt.js'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

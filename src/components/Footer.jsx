@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 export default function Footer() {
   return (
     <footer className="mt-auto pt-6 pb-6 px-6 sm:px-8">
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted dark:text-mutedDark">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-center text-xs text-muted dark:text-mutedDark">
         <Link to="/privacy" className="hover:text-gold transition-colors">
           Privacy Policy
         </Link>

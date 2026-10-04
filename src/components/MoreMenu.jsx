@@ -17,6 +17,7 @@ import {
   Landmark,
   Coins,
   ShieldCheck,
+  Download,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/AuthContext.jsx'
@@ -24,6 +25,7 @@ import { shouldShowWorkSection } from '../lib/lifeStage.js'
 import { supabase } from '../lib/supabaseClient.js'
 import { checkIsAdmin } from '../lib/adminAccess.js'
 import Modal from './ui/Modal.jsx'
+import { useInstallState } from '../lib/installPrompt.js'
 
 // Split the same way Sidebar.jsx's groups are, so WORK can be spliced in
 // between "Budgets" and "Learning ROI" — same relative position as
@@ -61,6 +63,7 @@ const LINKS_AFTER_WORK = [
 // (Phase 15+) will offer it as well once built.
 export default function MoreMenu({ open, onClose, darkMode, onToggleDark }) {
   const { signOut, profile, user } = useAuth()
+  const { standalone } = useInstallState() // Phase 41: web users only
 
   // Phase 39: same async admin check as Sidebar.jsx, same reasoning.
   const [isAdmin, setIsAdmin] = useState(false)
@@ -76,6 +79,7 @@ export default function MoreMenu({ open, onClose, darkMode, onToggleDark }) {
     ...LINKS_BEFORE_WORK,
     ...(showWork ? WORK_LINKS : []),
     ...LINKS_AFTER_WORK,
+    ...(standalone ? [] : [{ to: '/get-app', label: 'Install CountWise', icon: Download }]),
     ...(isAdmin ? [{ to: '/admin/rules', label: 'Rule Assistant', icon: ShieldCheck }] : []),
   ]
 
