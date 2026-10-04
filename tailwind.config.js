@@ -10,7 +10,7 @@ export default {
         surface: '#FFFFFF',
         line: '#E7E2D8',
         ink: '#221F1A',
-        muted: '#8A8478',
+        muted: '#736D62', // Phase 41: darkened from #8A8478 so grey text passes the 4.5:1 contrast check
         // Dark mode
         charcoal: '#15171B',
         charcoalSurface: '#1C1F24',
