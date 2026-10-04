@@ -28,64 +28,51 @@
 //   - CountWise is not a SEBI-registered Investment Adviser or Research
 //     Analyst, and the page says so, prominently, not buried in the Terms.
 import PageHeader from '../components/layout/PageHeader.jsx'
+import OptionCard from '../components/moneyOptions/OptionCard.jsx'
 import { useAuth } from '../lib/AuthContext.jsx'
-import { MONEY_OPTIONS, MONEY_OPTIONS_DIMENSIONS } from '../lib/moneyOptionsContent.js'
+import {
+  MONEY_OPTIONS, MONEY_OPTIONS_INTRO, MONEY_OPTIONS_DISCLAIMER, MONEY_OPTIONS_FOOTER,
+} from '../lib/moneyOptionsContent.js'
 
 export default function MoneyOptions() {
   const { profile } = useAuth()
 
   return (
-    <div className="p-6 sm:p-8 space-y-6 bg-paper dark:bg-charcoal min-h-screen">
+    <div className="p-6 sm:p-8 bg-paper dark:bg-charcoal min-h-screen">
       <PageHeader name={profile?.username} />
 
-      <div>
-        <h1 className="font-serif text-2xl font-semibold">Money options</h1>
-        <p className="text-sm text-muted dark:text-mutedDark mt-1 max-w-xl">
-          General, educational information about common ways people in India hold or grow money — described
-          by their general characteristics, not a recommendation for you specifically.
-        </p>
-      </div>
+      <div className="mt-6 max-w-3xl xl:max-w-5xl space-y-8">
+        <header className="space-y-2">
+          <h1 className="font-serif text-2xl font-semibold text-ink dark:text-offwhite">Money options</h1>
+          <p className="text-sm text-muted dark:text-mutedDark max-w-lg">{MONEY_OPTIONS_INTRO}</p>
+        </header>
 
-      <div className="border border-line dark:border-lineDark rounded-lg p-4 bg-paper dark:bg-charcoal">
-        <p className="text-sm font-medium text-ink dark:text-offwhite mb-1">Please read before this page is useful to you</p>
-        <ul className="text-xs text-muted dark:text-mutedDark space-y-1.5 list-disc pl-4">
-          <li>
-            CountWise is not a SEBI-registered Investment Adviser or Research Analyst, and nothing on this
-            page is personalized investment advice.
-          </li>
-          <li>
-            This page describes general product categories only — it never names a specific fund, stock, or
-            scheme, and it never states or implies what any option has returned or will return.
-          </li>
-          <li>
-            It does not use any of your CountWise data, and it is not computed, suggested, or written by AI.
-          </li>
-          <li>For advice on your own situation, a SEBI-registered Investment Adviser is the right person to ask.</li>
-        </ul>
-      </div>
-
-      <div className="space-y-4">
-        {MONEY_OPTIONS.map((opt) => (
-          <div key={opt.name} className="border border-line dark:border-lineDark rounded-lg p-4">
-            <p className="font-serif text-base font-semibold mb-2">{opt.name}</p>
-            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
-              {MONEY_OPTIONS_DIMENSIONS.map((d) => (
-                <div key={d.key}>
-                  <dt className="text-xs uppercase tracking-wide text-muted dark:text-mutedDark">{d.label}</dt>
-                  <dd className="text-sm text-ink dark:text-offwhite mt-0.5">{opt[d.key]}</dd>
-                </div>
+        {/* The one sentence that matters stays visible; the rest is one tap away. */}
+        <aside
+          aria-label="Important notice"
+          className="max-w-2xl rounded-lg border border-line dark:border-lineDark p-4"
+        >
+          <p className="text-sm text-ink dark:text-offwhite">{MONEY_OPTIONS_DISCLAIMER.headline}</p>
+          <details className="mt-2">
+            <summary className="cursor-pointer select-none text-xs text-ink dark:text-offwhite underline underline-offset-2">
+              {MONEY_OPTIONS_DISCLAIMER.moreLabel}
+            </summary>
+            <ul className="mt-2 space-y-1.5 list-disc pl-4 text-xs text-muted dark:text-mutedDark">
+              {MONEY_OPTIONS_DISCLAIMER.more.map((line) => (
+                <li key={line}>{line}</li>
               ))}
-            </dl>
-            <p className="text-xs text-muted dark:text-mutedDark italic">{opt.note}</p>
-          </div>
-        ))}
-      </div>
+            </ul>
+          </details>
+        </aside>
 
-      <p className="text-xs text-muted dark:text-mutedDark pt-2">
-        This list is not exhaustive and not ranked — the order above carries no meaning. Every option here
-        involves its own rules, charges, and conditions that this page does not fully cover; check the
-        provider's or scheme's own terms before acting on anything.
-      </p>
+        <ul className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          {MONEY_OPTIONS.map((option) => (
+            <OptionCard key={option.name} option={option} />
+          ))}
+        </ul>
+
+        <p className="text-xs text-muted dark:text-mutedDark max-w-2xl">{MONEY_OPTIONS_FOOTER}</p>
+      </div>
     </div>
   )
 }
