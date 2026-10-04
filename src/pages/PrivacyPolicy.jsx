@@ -13,6 +13,11 @@ import LegalPageLayout, { LegalSection } from '../components/layout/LegalPageLay
 // data description below. It is stored with the transaction under the same
 // per-user access rules and is never sent to any AI (see AIDataNotice.jsx).
 //
+// Updated 4 October 2026 (Phase 41): Google sign-in, the user_access
+// record (first-time welcome steps) and the Vercel host were not described
+// and are now; a short browser-storage section was added (sign-in session,
+// the "just signed in" note, installed-app file caching).
+//
 // Maintenance rule: any change that alters what data is collected, or
 // who receives it, must update this page in the same change.
 //
@@ -21,7 +26,7 @@ import LegalPageLayout, { LegalSection } from '../components/layout/LegalPageLay
 // CountWise is ever meant for real public users at scale.
 export default function PrivacyPolicy() {
   return (
-    <LegalPageLayout title="Privacy Policy" lastUpdated="28 September 2026">
+    <LegalPageLayout title="Privacy Policy" lastUpdated="4 October 2026">
       <LegalSection heading="What this document is">
         <p>
           This Privacy Policy explains what information CountWise collects, how it's stored, and what
@@ -33,8 +38,22 @@ export default function PrivacyPolicy() {
 
       <LegalSection heading="Information we collect">
         <p><strong>Account information.</strong> Your email address and password, handled entirely by Supabase Auth — CountWise's own code never sees or stores your password in plain text. You may optionally set a username, which is a display name only, shown back to you in greetings around the app — it isn't used to verify your identity.</p>
+        <p>
+          <strong>Signing in with Google.</strong> If you choose “Continue with Google”, Google confirms
+          your identity to Supabase and CountWise receives your Google account's email address. Supabase
+          may also keep basic details Google shares with it, such as your name and profile picture
+          address, as part of your authentication record; CountWise does not use them. CountWise never
+          sees your Google password.
+        </p>
         <p><strong>Financial data you enter.</strong> Everything you type into Money Inbox or add manually: transactions (including, if you choose, a spending context on an expense — planned, routine, social or unplanned — which is a label you pick, never free text), accounts (wallet/bank, name and type only — never real account numbers), categories, budgets, goals and goal contributions, and Learning ROI items. CountWise never connects to a real bank or pulls this data from anywhere — you type it in, and only it is stored.</p>
         <p><strong>Preferences.</strong> Simple settings you control: dark mode, whether inactivity reminders are on and after how many days, and whether you get an email notification on sign-in. Also your life stage — student, employed, or both — and, if employed, whether you're a fresher or already working, which decides whether the work-related pages are shown.</p>
+        <p>
+          <strong>How you first chose to use CountWise.</strong> One small record per account saying that
+          you have finished the first-time welcome steps, how you chose to use CountWise (in your
+          browser, as an installed web app, or, for accounts that existed before this feature, an
+          earlier-account marker), and the date. It is used only to decide whether to show you those
+          welcome steps, and it is deleted with your account.
+        </p>
         <p>
           <strong>Employee-finance information (CTC, salary, PF/pension).</strong> If you use these
           pages you can enter a CTC exploration (a label, your total CTC, and its components — each a
@@ -77,6 +96,17 @@ export default function PrivacyPolicy() {
           Resend is never contacted for that sign-in.
         </p>
         <p>
+          <strong>Google (sign-in)</strong> — used only if you choose “Continue with Google”. Google
+          handles the sign-in screen and tells Supabase who you are; Google's own privacy policy applies
+          to what Google itself collects. If you never use that button, Google is not involved in
+          signing you in.
+        </p>
+        <p>
+          <strong>Vercel</strong> — hosts CountWise's web pages. Like any web host, it handles ordinary
+          technical request information, such as your IP address, in order to deliver those pages. The
+          financial data you enter is stored in Supabase, not on Vercel.
+        </p>
+        <p>
           <strong>Google (Gemini API)</strong> — used only for the optional AI features described in the
           AI &amp; Data Processing Notice. Google receives data only when you click one of those
           features — for example an offer-letter file you choose to extract, or the figures behind an
@@ -86,6 +116,24 @@ export default function PrivacyPolicy() {
           &amp; Data Processing Notice before using these features with anything sensitive.
         </p>
         <p>No other third-party service currently receives the data you enter into CountWise.</p>
+      </LegalSection>
+
+      <LegalSection heading="Browser storage and the installed app">
+        <ul>
+          <li>
+            Supabase keeps your sign-in session in your browser's storage so that you stay signed in.
+            Signing out ends it.
+          </li>
+          <li>
+            CountWise keeps a temporary note in your browser tab that you have just signed in, so it can
+            show the welcome page once. It disappears when the tab session ends.
+          </li>
+          <li>
+            If you install CountWise as an app from your browser, your device stores CountWise's own
+            program files so it opens faster. It does not store your financial data for offline use, and
+            the installed app still needs a connection to show your data.
+          </li>
+        </ul>
       </LegalSection>
 
       <LegalSection heading="Your rights and controls">
