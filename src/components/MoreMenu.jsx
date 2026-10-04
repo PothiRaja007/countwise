@@ -88,7 +88,7 @@ export default function MoreMenu({ open, onClose, darkMode, onToggleDark }) {
   return (
     <Modal onClose={onClose} label="More menu" className="fixed inset-0 md:hidden">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="absolute bottom-0 inset-x-0 bg-surface dark:bg-charcoalSurface border-t border-line dark:border-lineDark rounded-t-xl p-3 pb-6">
+      <div className="absolute bottom-0 inset-x-0 max-h-[85vh] overflow-y-auto bg-surface dark:bg-charcoalSurface border-t border-line dark:border-lineDark rounded-t-xl p-3 pb-6">
         <div className="flex items-center justify-between px-2 py-2 mb-1">
           <span className="text-sm font-medium text-ink dark:text-offwhite">More</span>
           <button onClick={onClose} aria-label="Close menu" className="text-muted dark:text-mutedDark p-1">
