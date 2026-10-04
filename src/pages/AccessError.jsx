@@ -6,7 +6,7 @@ import Button from '../components/ui/Button.jsx'
 // temporary database problem can never lock someone out of their own app.
 export default function AccessError({ onRetry, onContinue }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-paper dark:bg-charcoal text-ink dark:text-offwhite">
+    <main className="min-h-screen flex items-center justify-center p-6 bg-paper dark:bg-charcoal text-ink dark:text-offwhite">
       <div className="max-w-sm w-full text-center">
         <h1 className="font-display text-xl font-semibold">We could not load your account details.</h1>
         <p className="mt-2 text-sm text-muted dark:text-mutedDark">
@@ -25,6 +25,6 @@ export default function AccessError({ onRetry, onContinue }) {
           </button>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

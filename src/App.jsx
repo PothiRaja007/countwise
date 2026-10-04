@@ -1,38 +1,44 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AppShell from './components/layout/AppShell.jsx'
-import Overview from './pages/Overview.jsx'
-import Transactions from './pages/Transactions.jsx'
-import Goals from './pages/Goals.jsx'
-import LearningROI from './pages/LearningROI.jsx'
-import MoneyOptions from './pages/MoneyOptions.jsx'
-import AdminRuleAssistant from './pages/AdminRuleAssistant.jsx'
-import AdvancedInsights from './pages/AdvancedInsights.jsx'
-import Behavior from './pages/Behavior.jsx'
-import Charts from './pages/Charts.jsx'
-import Calendar from './pages/Calendar.jsx'
-import Budgets from './pages/Budgets.jsx'
-import Reports from './pages/Reports.jsx'
-import Settings from './pages/Settings.jsx'
-import CTCExplorer from './pages/CTCExplorer.jsx'
-import Salary from './pages/Salary.jsx'
-import PFPension from './pages/PFPension.jsx'
-import Onboarding from './pages/Onboarding.jsx'
 import Login from './pages/Login.jsx'
-import ResetPassword from './pages/ResetPassword.jsx'
-import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
-import TermsAndConditions from './pages/TermsAndConditions.jsx'
-import AIDataNotice from './pages/AIDataNotice.jsx'
 // Phase 41 - first-access flow (see supabase/phase41_user_access.sql)
-import WelcomeHome from './pages/WelcomeHome.jsx'
-import FirstRun from './pages/FirstRun.jsx'
-import AccessError from './pages/AccessError.jsx'
-import InstallInApp from './pages/InstallInApp.jsx'
-import { PublicInstall, PublicThankYou } from './pages/PublicAccessPages.jsx'
 import { useAccessStage } from './lib/useAccessStage.js'
 import { useFreshSignIn, clearFreshSignIn } from './lib/freshSignIn.js'
 import { useAuth } from './lib/AuthContext.jsx'
 import { supabase } from './lib/supabaseClient.js'
+
+// Performance: only the login screen and the app shell are in the first download. Every
+// other page is fetched the first time it is needed (and then kept by the installed app's
+// file cache), so the login page no longer waits for charts, salary tools and so on.
+const Overview = lazy(() => import('./pages/Overview.jsx'))
+const Transactions = lazy(() => import('./pages/Transactions.jsx'))
+const Goals = lazy(() => import('./pages/Goals.jsx'))
+const LearningROI = lazy(() => import('./pages/LearningROI.jsx'))
+const MoneyOptions = lazy(() => import('./pages/MoneyOptions.jsx'))
+const AdminRuleAssistant = lazy(() => import('./pages/AdminRuleAssistant.jsx'))
+const AdvancedInsights = lazy(() => import('./pages/AdvancedInsights.jsx'))
+const Behavior = lazy(() => import('./pages/Behavior.jsx'))
+const Charts = lazy(() => import('./pages/Charts.jsx'))
+const Calendar = lazy(() => import('./pages/Calendar.jsx'))
+const Budgets = lazy(() => import('./pages/Budgets.jsx'))
+const Reports = lazy(() => import('./pages/Reports.jsx'))
+const Settings = lazy(() => import('./pages/Settings.jsx'))
+const CTCExplorer = lazy(() => import('./pages/CTCExplorer.jsx'))
+const Salary = lazy(() => import('./pages/Salary.jsx'))
+const PFPension = lazy(() => import('./pages/PFPension.jsx'))
+const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy.jsx'))
+const TermsAndConditions = lazy(() => import('./pages/TermsAndConditions.jsx'))
+const AIDataNotice = lazy(() => import('./pages/AIDataNotice.jsx'))
+const WelcomeHome = lazy(() => import('./pages/WelcomeHome.jsx'))
+const FirstRun = lazy(() => import('./pages/FirstRun.jsx'))
+const AccessError = lazy(() => import('./pages/AccessError.jsx'))
+const InstallInApp = lazy(() => import('./pages/InstallInApp.jsx'))
+const PublicInstall = lazy(() => import('./pages/PublicAccessPages.jsx').then((m) => ({ default: m.PublicInstall })))
+const PublicThankYou = lazy(() => import('./pages/PublicAccessPages.jsx').then((m) => ({ default: m.PublicThankYou })))
+
 
 // Phase 23B: these three content pages must be reachable without being
 // logged in (a prospective user should be able to read them pre-signup).
@@ -50,7 +56,7 @@ const PUBLIC_PAGES = {
   '/thank-you': PublicThankYou,
 }
 
-export default function App() {
+function AppInner() {
   const [darkMode, setDarkMode] = useState(false)
   const [themeLoaded, setThemeLoaded] = useState(false)
   const { session, profile, user, loading, passwordRecovery } = useAuth()
@@ -162,6 +168,7 @@ export default function App() {
 
   return (
     <AppShell darkMode={darkMode} onToggleDark={handleToggleDark}>
+      <Suspense fallback={<div className="p-8 text-sm text-gray-500">Loading...</div>}>
       <Routes>
         <Route path="/" element={<Overview />} />
         <Route path="/transactions" element={<Transactions />} />
@@ -189,6 +196,21 @@ export default function App() {
         {/* Phase 41: after the first-time flow finishes, a stale /welcome address goes home. */}
         <Route path="/welcome/*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </AppShell>
+  )
+}
+
+// Wraps the whole app: while a lazily loaded page is downloading, show the same plain
+// "Loading..." screen the app already uses for its other waits.
+export default function App() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">Loading...</div>
+      }
+    >
+      <AppInner />
+    </Suspense>
   )
 }

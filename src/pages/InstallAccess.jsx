@@ -26,7 +26,7 @@ export default function InstallAccess({ mode, onInstalled, onUseBrowser }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-paper dark:bg-charcoal text-ink dark:text-offwhite">
-      <div className="flex-1 w-full max-w-4xl mx-auto px-6 sm:px-8 py-10 sm:py-14">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-6 sm:px-8 py-10 sm:py-14">
         <div className="flex items-center justify-between">
           <div className="font-display text-lg font-semibold tracking-tight">
             <span className="text-ink dark:text-offwhite">Count</span>
@@ -82,7 +82,7 @@ export default function InstallAccess({ mode, onInstalled, onUseBrowser }) {
             Use CountWise in browser
           </Button>
         </div>
-      </div>
+      </main>
       <Footer />
     </div>
   )

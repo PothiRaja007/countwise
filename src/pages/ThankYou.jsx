@@ -50,7 +50,7 @@ export default function ThankYou({ mode, onContinue, busy = false, error = null 
 
   return (
     <div className="min-h-screen flex flex-col bg-paper dark:bg-charcoal text-ink dark:text-offwhite">
-      <div className="flex-1 w-full max-w-2xl mx-auto px-6 sm:px-8 py-10 sm:py-14">
+      <main className="flex-1 w-full max-w-2xl mx-auto px-6 sm:px-8 py-10 sm:py-14">
         <div className="font-display text-lg font-semibold tracking-tight">
           <span className="text-ink dark:text-offwhite">Count</span>
           <span className="text-gold">Wise</span>
@@ -69,7 +69,7 @@ export default function ThankYou({ mode, onContinue, busy = false, error = null 
             {busy ? 'Please wait...' : mode === 'first-run' ? 'Use CountWise as a website' : 'Open CountWise'}
           </Button>
         </div>
-      </div>
+      </main>
       <Footer />
     </div>
   )

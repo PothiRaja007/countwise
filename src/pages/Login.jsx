@@ -172,7 +172,7 @@ export default function Login() {
 
   if (recoveryStep === 'request') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-paper dark:bg-charcoal">
+      <main className="min-h-screen flex items-center justify-center p-6 bg-paper dark:bg-charcoal">
         <div className="max-w-sm w-full">
           <div className="text-center mb-8">
             <h1 className="font-display text-lg font-medium">Reset your password</h1>
@@ -215,13 +215,13 @@ export default function Login() {
             Back to Sign In
           </button>
         </div>
-      </div>
+      </main>
     )
   }
 
   if (recoveryStep === 'verify') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-paper dark:bg-charcoal">
+      <main className="min-h-screen flex items-center justify-center p-6 bg-paper dark:bg-charcoal">
         <div className="max-w-sm w-full">
           <div className="text-center mb-8">
             <h1 className="font-display text-lg font-medium">Enter your code</h1>
@@ -275,12 +275,12 @@ export default function Login() {
             </button>
           </div>
         </div>
-      </div>
+      </main>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-paper dark:bg-charcoal">
+    <main className="min-h-screen flex items-center justify-center p-6 bg-paper dark:bg-charcoal">
       <div className="max-w-sm w-full">
         <div className="text-center mb-8">
           {/* Fixed light tile so the icon's dark bars stay visible in both themes */}
@@ -392,6 +392,6 @@ export default function Login() {
             only other addition anywhere in this file. */}
         <Footer />
       </div>
-    </div>
+    </main>
   )
 }
