@@ -63,8 +63,15 @@ export function buildAdvancedInsightsPrompt(sections) {
  *   Every underlying engine result, wrapped as { figures } — the exact
  *   shape allowedNumbers() (from assistNarration.js) already expects, so
  *   no new number-collection logic is written here at all.
+ * @param {string[]} shownLines
+ *   The exact sentences shown on the page and sent in the prompt. A number
+ *   written in one of those sentences (a date in a goal line, "42%" or
+ *   "3 days" in a Behavior flag) is on screen for the person to check, so
+ *   repeating it is honest. Before this, only the engines' raw number
+ *   lists were allowed, and a correct summary that repeated a number from
+ *   a shown sentence was thrown away.
  */
-export function validateAdvancedInsights(text, figureSources) {
+export function validateAdvancedInsights(text, figureSources, shownLines = []) {
   if (typeof text !== 'string') return { ok: false, reason: 'not-a-string' }
   const trimmed = text.trim()
   if (trimmed.length === 0) return { ok: false, reason: 'empty' }
@@ -76,11 +83,21 @@ export function validateAdvancedInsights(text, figureSources) {
     }
   }
 
-  const allowed = allowedNumbers(figureSources)
+  const allowed = [...allowedNumbers(figureSources), ...extractNumbers(shownLines.join(' '))]
   for (const n of extractNumbers(trimmed)) {
     if (!allowed.some((a) => Math.abs(a - n) < 0.005)) {
       return { ok: false, reason: `unlisted-number:${n}` }
     }
   }
   return { ok: true }
+}
+
+/** Plain-words reason shown under the failure message, so "why?" has an answer. */
+export function explainRejection(reason) {
+  if (typeof reason !== 'string') return null
+  if (reason.startsWith('unlisted-number')) return 'The AI wrote a number that is not shown above, so it was not used.'
+  if (reason.startsWith('forbidden-phrase')) return 'The AI used a word CountWise does not allow, so it was not used.'
+  if (reason === 'too-long') return 'The AI answer was too long, so it was not used.'
+  if (reason === 'empty' || reason === 'not-a-string') return 'The AI sent back no usable answer.'
+  return null
 }

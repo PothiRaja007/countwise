@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { ADVANCED_INSIGHTS_SCHEMA, buildAdvancedInsightsPrompt, validateAdvancedInsights, MAX_INSIGHTS_CHARS } from './advancedInsights.js'
+import { ADVANCED_INSIGHTS_SCHEMA, buildAdvancedInsightsPrompt, validateAdvancedInsights, explainRejection, MAX_INSIGHTS_CHARS } from './advancedInsights.js'
 
 let passed = 0, failed = 0
 function test(name, fn) {
@@ -73,6 +73,38 @@ test('text with no numbers at all is accepted (a purely qualitative summary is v
 
 test('an empty figures list correctly rejects every number (nothing to summarize, nothing is allowed)', () => {
   assert.strictEqual(validateAdvancedInsights('Spending rose by 1700.', []).ok, false)
+})
+
+
+// ---- Numbers written inside the shown sentences (the live bug) ----------
+const SHOWN = [
+  "A goal's recent pace is \u20b93,000.00/month, projected around 2028-12-29 if that continues.",
+  '42% of income was spent in the first 3 days',
+]
+
+test('a date written in a shown goal sentence may be repeated', () => {
+  assert.strictEqual(validateAdvancedInsights('A goal is projected around 2028-12-29.', FIGURES, SHOWN).ok, true)
+})
+
+test('"42%" and "3 days" written in a shown Behavior sentence may be repeated', () => {
+  assert.strictEqual(validateAdvancedInsights('42% of income was spent in the first 3 days.', FIGURES, SHOWN).ok, true)
+})
+
+test('a number that is in neither the figures nor the shown sentences is still rejected', () => {
+  assert.strictEqual(validateAdvancedInsights('About 77% of income was spent early.', FIGURES, SHOWN).ok, false)
+})
+
+test('without the shown sentences, the same repeated number is rejected (proves the new argument is what allows it)', () => {
+  assert.strictEqual(validateAdvancedInsights('42% of income was spent in the first 3 days.', FIGURES, []).ok, false)
+})
+
+test('explainRejection gives a plain sentence for each reason, and null for unknown ones', () => {
+  assert.ok(explainRejection('unlisted-number:2028').includes('number'))
+  assert.ok(explainRejection('forbidden-phrase:should').includes('word'))
+  assert.ok(explainRejection('too-long').includes('long'))
+  assert.ok(explainRejection('empty').includes('no usable'))
+  assert.strictEqual(explainRejection('something-else'), null)
+  assert.strictEqual(explainRejection(undefined), null)
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

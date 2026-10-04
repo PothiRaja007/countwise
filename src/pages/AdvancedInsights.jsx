@@ -17,7 +17,7 @@ import { periodRange } from '../lib/dateRange.js'
 import { formatCurrency } from '../lib/format.js'
 import { friendlyError } from '../lib/errorMessages.js'
 import {
-  ADVANCED_INSIGHTS_SCHEMA, buildAdvancedInsightsPrompt, validateAdvancedInsights,
+  ADVANCED_INSIGHTS_SCHEMA, buildAdvancedInsightsPrompt, validateAdvancedInsights, explainRejection,
 } from '../lib/advancedInsights.js'
 import PageHeader from '../components/layout/PageHeader.jsx'
 import ErrorState from '../components/layout/ErrorState.jsx'
@@ -143,11 +143,15 @@ export default function AdvancedInsights() {
         { figures: { stars: behavior.stars, ...behavior.stats } },
       ]
       const text = resp?.data?.summary
-      const check = validateAdvancedInsights(text, figureSources)
+      // The sentences shown on the page are also allowed to be repeated, numbers and all.
+      const check = validateAdvancedInsights(text, figureSources, sections.flatMap((s) => s.lines))
       if (!check.ok) {
         // eslint-disable-next-line no-console
         console.error('Advanced insight discarded by validation:', check.reason)
-        setSummaryError("Couldn't produce a reliable summary this time. The sections above are unchanged.")
+        const why = explainRejection(check.reason)
+        setSummaryError(
+          "Couldn't produce a reliable summary this time. The sections above are unchanged." + (why ? ` ${why}` : '')
+        )
         return
       }
       setSummary(text.trim())
