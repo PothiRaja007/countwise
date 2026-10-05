@@ -8,6 +8,39 @@
       content="CountWise is a personal finance tracker built around clarity: type expenses like a message, plan goals and budgets, and see where your money goes."
     />
     <link rel="icon" type="image/png" href="/logo-icon.png" />
+    <link rel="preload" as="image" href="/logo-icon.png" />
+    <style id="cw-splash-style">
+      /* Startup splash (phones only): the logo zooms out to its normal size,
+         then the cover fades away. Pure CSS, so it plays immediately, before
+         the app has loaded. Only transform and opacity are animated, which
+         keeps it smooth on low-end phones. Colours follow the phone's own
+         light/dark setting, because the app's saved theme isn't known yet. */
+      #cw-splash { display: none; }
+      @media (max-width: 767px) {
+        #cw-splash {
+          position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 2147483647;
+          display: flex; align-items: center; justify-content: center;
+          background: #F7F5F0;
+          animation: cw-splash-out 320ms ease-in 1200ms forwards;
+        }
+        #cw-splash img {
+          width: clamp(96px, 30vw, 140px); height: auto;
+          opacity: 0; will-change: transform, opacity;
+          animation: cw-logo-zoom 1000ms cubic-bezier(0.33, 1, 0.68, 1) both, cw-logo-fade 380ms ease-out both;
+        }
+      }
+      @media (max-width: 767px) and (prefers-color-scheme: dark) {
+        #cw-splash { background: #15171B; }
+      }
+      /* Reduced motion: no zoom, just a short fade. */
+      @media (prefers-reduced-motion: reduce) {
+        #cw-splash { animation: cw-splash-out 250ms ease-in 700ms forwards; }
+        #cw-splash img { animation: cw-logo-fade 300ms ease-out both; }
+      }
+      @keyframes cw-logo-zoom { from { transform: scale(1.9); } to { transform: scale(1); } }
+      @keyframes cw-logo-fade { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes cw-splash-out { to { opacity: 0; visibility: hidden; } }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Fonts load without blocking the first paint (text shows in a fallback font, then swaps). -->
@@ -21,6 +54,22 @@
     <title>CountWise — Every expense counts</title>
   </head>
   <body class="bg-paper dark:bg-charcoal text-ink dark:text-offwhite font-body antialiased">
+    <div id="cw-splash" aria-hidden="true"><img src="/logo-icon.png" alt="" width="247" height="264" decoding="async" /></div>
+    <script>
+      // Plays once per app launch / browser session, so signing in with Google
+      // (which reloads the page) or refreshing doesn't replay it. It removes
+      // itself when the fade-out ends, with a timer as a safety net.
+      (function () {
+        var el = document.getElementById('cw-splash');
+        if (!el) return;
+        try {
+          if (sessionStorage.getItem('cw-splash-seen')) { el.remove(); return; }
+          sessionStorage.setItem('cw-splash-seen', '1');
+        } catch (e) { /* storage blocked: just show it */ }
+        el.addEventListener('animationend', function (ev) { if (ev.target === el) el.remove(); });
+        setTimeout(function () { if (el.parentNode) el.remove(); }, 3000);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
