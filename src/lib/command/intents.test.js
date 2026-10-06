@@ -201,7 +201,7 @@ test('I9: availability — with BUILT_THROUGH = P1 only today\'s path is availab
 
 test('I10: the folder is pure — only the three known modules, importing only each other, with no clock, randomness or database', () => {
   const files = readdirSync(HERE).filter((f) => f.endsWith('.js') && !f.endsWith('.test.js')).sort()
-  assert.deepStrictEqual(files, ['expectedRouting.js', 'intents.js', 'pendingAction.js'], 'a new module needs a deliberate review')
+  assert.deepStrictEqual(files, ['entityResolver.js', 'expectedRouting.js', 'intents.js', 'pendingAction.js', 'periodParser.js'], 'a new module needs a deliberate review')
   for (const f of files) {
     const code = stripComments(readFileSync(fileURLToPath(new URL(f, HERE)), 'utf8'))
     const specs = [...code.matchAll(/import\s[^;]*?from\s*['"]([^'"]+)['"]|import\s*['"]([^'"]+)['"]/g)].map((m) => m[1] || m[2])
