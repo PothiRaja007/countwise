@@ -45,6 +45,7 @@ function freeze(value) {
 // ---------- the words (pinned by tests) ----------
 export const GUARD_MESSAGES = freeze({
   footer: "This isn't available from Money Inbox yet. Nothing was saved.",
+  needDetail: 'I need one more detail before I can answer. Nothing was saved.',
   unavailable: "That isn't available from Money Inbox yet. Nothing was saved.",
   expired: 'That question timed out. Please send your message again.',
   mixedTitle: 'One thing at a time',
@@ -166,7 +167,8 @@ export function buildGuardView(result) {
   const title = result.kind === 'query' ? `I understood a question: ${summary}` : `I understood: ${summary}`
   return freeze({
     kind: result.kind, tone: 'info', title, message: null, summary,
-    notes: detailNotes(result), choices: EDIT_AND_CANCEL, footer: GUARD_MESSAGES.footer,
+    // An intent that is built but still has an open question needs one more detail; one that is not built yet says so.
+    notes: detailNotes(result), choices: EDIT_AND_CANCEL, footer: isIntentAvailable(result.pending.intent) ? GUARD_MESSAGES.needDetail : GUARD_MESSAGES.footer,
   })
 }
 

@@ -65,9 +65,13 @@ test('G2: every choice does the right thing — cancel, edit, continue, unavaila
   assert.deepStrictEqual(resolveGuardChoice(run('salary'), 'record_salary', NOW), { action: 'continue_as_transaction' })
   assert.deepStrictEqual(resolveGuardChoice(run('laptop'), 'record_expense', NOW), { action: 'continue_as_transaction' })
   // Every other intent is not built yet.
-  for (const [text, id] of [['I need 50000 for a laptop', 'create_goal'], ['laptop', 'goal_progress_g1'], ['salary', 'open_salary'], ['goal', 'create_goal'], ['Power BI', 'learning_status_l1'], ['food', 'spend_c1']]) {
+  for (const [text, id] of [['I need 50000 for a laptop', 'create_goal'], ['salary', 'open_salary'], ['goal', 'create_goal'], ['Power BI', 'learning_status_l1']]) {
     assert.deepStrictEqual(resolveGuardChoice(run(text), id, NOW), { action: 'unavailable', message: GUARD_MESSAGES.unavailable }, `${text} → ${id}`)
   }
+  // The four built questions (P5) start instead: the screen answers them.
+  assert.deepStrictEqual(resolveGuardChoice(run('laptop'), 'goal_progress_g1', NOW), { action: 'start', intent: 'QUERY_GOAL_PROGRESS', choiceId: 'goal_progress_g1' })
+  assert.deepStrictEqual(resolveGuardChoice(run('food'), 'spend_c1', NOW), { action: 'start', intent: 'QUERY_SPEND', choiceId: 'spend_c1' })
+  assert.deepStrictEqual(resolveGuardChoice(run('balance'), 'total_balance', NOW), { action: 'start', intent: 'QUERY_BALANCE', choiceId: 'total_balance' })
   // Five minutes: cancel and edit still work, anything else says the question timed out.
   const late = NOW + PENDING_ACTION_TTL_MS + 1
   const clar = run('I need 50000 for a laptop')
@@ -206,13 +210,26 @@ test('G9: determinism — the same result gives the same panel', () => {
   for (const text of ALL) assert.deepStrictEqual(view(text), view(text), text)
 })
 
-test('G10: availability follows BUILT_THROUGH — today only a normal transaction continues; an available intent would start', () => {
-  assert.strictEqual(BUILT_THROUGH, 'P4')
-  assert.deepStrictEqual(Object.keys(CONTRACTS).filter((id) => isIntentAvailable(id)), ['RECORD_TRANSACTION'])
+test('G10: availability follows BUILT_THROUGH — a normal transaction and the four built questions; an available intent would start', () => {
+  assert.strictEqual(BUILT_THROUGH, 'P5')
+  assert.deepStrictEqual(Object.keys(CONTRACTS).filter((id) => isIntentAvailable(id)), ['RECORD_TRANSACTION', 'QUERY_SPEND', 'QUERY_BUDGET_LEFT', 'QUERY_GOAL_PROGRESS', 'QUERY_BALANCE'])
   const r = run('I need 50000 for a laptop')
   assert.deepStrictEqual(resolveGuardChoice(r, 'create_goal', NOW, () => true), { action: 'start', intent: 'CREATE_GOAL', choiceId: 'create_goal' })
   assert.deepStrictEqual(resolveGuardChoice(r, 'create_goal', NOW, () => false), { action: 'unavailable', message: GUARD_MESSAGES.unavailable })
   assert.deepStrictEqual(resolveGuardChoice(r, 'record_expense', NOW, () => false), { action: 'unavailable', message: GUARD_MESSAGES.unavailable })
+})
+
+test('G11: a built question with something still open asks for one more detail; an unbuilt one says it is not available yet', () => {
+  const open = view('How much did I spend on food in October?') // "in" stays on the category (a known P3 limit), so it asks
+  assert.strictEqual(open.footer, GUARD_MESSAGES.needDetail)
+  assert.strictEqual(GUARD_MESSAGES.needDetail, 'I need one more detail before I can answer. Nothing was saved.')
+  assert.strictEqual(view('How much is left in my budget?').footer, GUARD_MESSAGES.needDetail)
+  assert.strictEqual(view('How much did I pay for my pension?').footer, GUARD_MESSAGES.footer) // pension is P10
+  assert.strictEqual(view('Create a goal for a laptop worth 50000').footer, GUARD_MESSAGES.footer)
+  assert.strictEqual(view('Open my goals').footer, GUARD_MESSAGES.footer)
+  for (const text of ['How much is left in my budget?', 'How much did I spend on food in October?']) {
+    assert.deepStrictEqual(view(text).choices, [{ id: 'edit', label: 'Edit my message' }, { id: 'cancel', label: 'Cancel' }], text)
+  }
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

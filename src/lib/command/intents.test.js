@@ -190,9 +190,10 @@ test('I8: exactly six allowed pages, each a real route, and none of the excluded
   assert.throws(() => I.pageRoute('settings'))
 })
 
-test('I9: availability — with BUILT_THROUGH = P4 only today\'s path is available; unknown phases and intents throw', () => {
-  assert.strictEqual(I.BUILT_THROUGH, 'P4')
-  assert.deepStrictEqual(I.INTENT_IDS.filter((id) => I.isIntentAvailable(id)), ['RECORD_TRANSACTION'])
+test('I9: availability — with BUILT_THROUGH = P5 today\'s path and the four questions are available; unknown phases and intents throw', () => {
+  assert.strictEqual(I.BUILT_THROUGH, 'P5')
+  assert.deepStrictEqual(I.INTENT_IDS.filter((id) => I.isIntentAvailable(id)), ['RECORD_TRANSACTION', 'QUERY_SPEND', 'QUERY_BUDGET_LEFT', 'QUERY_GOAL_PROGRESS', 'QUERY_BALANCE'])
+  assert.strictEqual(I.isIntentAvailable('QUERY_PENSION_ESTIMATE'), false) // pension waits for P10
   assert.ok(I.phaseIndex('P0') < I.phaseIndex('P1') && I.phaseIndex('P9') < I.phaseIndex('P10'))
   assert.strictEqual(I.PHASE_ORDER.length, 14)
   assert.throws(() => I.phaseIndex('P99'))
@@ -201,11 +202,13 @@ test('I9: availability — with BUILT_THROUGH = P4 only today\'s path is availab
 
 test('I10: the folder is pure — only the three known modules, importing only each other, with no clock, randomness or database', () => {
   const files = readdirSync(HERE).filter((f) => f.endsWith('.js') && !f.endsWith('.test.js')).sort()
-  assert.deepStrictEqual(files, ['amountReader.js', 'entityResolver.js', 'expectedRouting.js', 'guardView.js', 'intents.js', 'interpreter.js', 'pendingAction.js', 'periodParser.js'], 'a new module needs a deliberate review')
+  assert.deepStrictEqual(files, ['amountReader.js', 'entityResolver.js', 'expectedRouting.js', 'guardView.js', 'intents.js', 'interpreter.js', 'pendingAction.js', 'periodParser.js', 'queries.js'], 'a new module needs a deliberate review')
   for (const f of files) {
     const code = stripComments(readFileSync(fileURLToPath(new URL(f, HERE)), 'utf8'))
     const specs = [...code.matchAll(/import\s[^;]*?from\s*['"]([^'"]+)['"]|import\s*['"]([^'"]+)['"]/g)].map((m) => m[1] || m[2])
-    for (const s of specs) assert.ok(/^\.\/[\w]+\.js$/.test(s) && files.includes(s.slice(2)), `${f} imports "${s}"`)
+    // queries.js (P5) may also import exactly these three existing pure engines, so an answer runs the same code as the page.
+    const ENGINES = f === 'queries.js' ? ['../financialEngine.js', '../budgetEngine.js', '../goalEngine.js'] : []
+    for (const s of specs) assert.ok(ENGINES.includes(s) || (/^\.\/[\w]+\.js$/.test(s) && files.includes(s.slice(2))), `${f} imports "${s}"`)
     assert.ok(!/\bimport\s*\(|\brequire\s*\(/.test(code), `${f}: dynamic import or require`)
     assert.ok(!/Date\.now|new\s+Date\s*\(\s*\)|performance\.now|Math\.random|crypto\./.test(code), `${f} reads the clock or uses randomness`)
     assert.ok(!/supabase|react|router/i.test(code.replace(/router/g, '')), `${f} mentions the database or React`)

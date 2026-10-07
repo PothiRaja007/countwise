@@ -12,6 +12,9 @@ import ReviewDrawer from './ReviewDrawer.jsx'
 import CommandGuardPanel from './CommandGuardPanel.jsx'
 import { interpret } from '../../lib/command/interpreter.js'
 import { buildGuardView, resolveGuardChoice } from '../../lib/command/guardView.js'
+import QueryResultDialog from './QueryResultDialog.jsx'
+import { requestFromResult, queryFromChoice, answerQuery, dataProblemAnswer, mayBeTruncated, QUERY_MESSAGES } from '../../lib/command/queries.js'
+import { formatCurrency } from '../../lib/format.js'
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
 
@@ -20,6 +23,62 @@ const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
 const nameList = (rows) => (rows || [])
   .filter((r) => r && r.id != null && typeof r.name === 'string' && r.name.trim())
   .map((r) => ({ id: String(r.id), name: r.name }))
+
+// The reads behind one question (P5). Select-only, for this user only, and only what
+// that question needs. An error, or a result that may have been cut off at the row
+// limit, ends as "I couldn't read all your data": a question never shows a figure it
+// could not fully read.
+const rowsOf = (res) => {
+  if (res.error) throw res.error
+  return res.data || []
+}
+async function readQueryData(request, userId) {
+  const data = { transactions: [], accounts: [], budgets: [], goals: [], goalContributions: [], rowLimitHit: false }
+  if (request.intent === 'QUERY_SPEND') {
+    const base = supabase
+      .from('transactions')
+      .select('category_id, type, amount, transaction_date')
+      .eq('user_id', userId)
+      .gte('transaction_date', request.period.start)
+      .lte('transaction_date', request.period.end)
+    data.transactions = rowsOf(await (request.category ? base.eq('category_id', request.category.id) : base))
+  } else if (request.intent === 'QUERY_BUDGET_LEFT') {
+    data.budgets = rowsOf(await supabase
+      .from('budgets')
+      .select('category_id, amount, period_start, period_end')
+      .eq('user_id', userId)
+      .eq('category_id', request.category.id)
+      .eq('period_start', request.period.start))
+    const budget = data.budgets[0]
+    if (budget) {
+      data.transactions = rowsOf(await supabase
+        .from('transactions')
+        .select('category_id, type, amount, transaction_date')
+        .eq('user_id', userId)
+        .eq('category_id', budget.category_id)
+        .gte('transaction_date', budget.period_start)
+        .lte('transaction_date', budget.period_end))
+    }
+  } else if (request.intent === 'QUERY_GOAL_PROGRESS') {
+    const [goalsRes, contributionsRes] = await Promise.all([
+      supabase.from('goals').select('id, name, target_amount, status').eq('user_id', userId).eq('id', request.goal.id),
+      supabase.from('goal_contributions').select('goal_id, account_id, amount, type').eq('user_id', userId).eq('goal_id', request.goal.id),
+    ])
+    data.goals = rowsOf(goalsRes)
+    data.goalContributions = rowsOf(contributionsRes)
+  } else {
+    const [transactionsRes, accountsRes, contributionsRes] = await Promise.all([
+      supabase.from('transactions').select('account_id, to_account_id, type, amount, transaction_date').eq('user_id', userId),
+      supabase.from('accounts').select('id, name').eq('user_id', userId).eq('is_active', true),
+      supabase.from('goal_contributions').select('goal_id, account_id, amount, type').eq('user_id', userId),
+    ])
+    data.transactions = rowsOf(transactionsRes)
+    data.accounts = rowsOf(accountsRes)
+    data.goalContributions = rowsOf(contributionsRes)
+  }
+  data.rowLimitHit = [data.transactions, data.budgets, data.goals, data.goalContributions, data.accounts].some(mayBeTruncated)
+  return data
+}
 
 export default function MoneyInboxInput({ onClose, embedded = false, onSaved, initialDate, initialText = '' }) {
   const { user } = useAuth()
@@ -37,6 +96,22 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
   // why the user is back at the text box (not available yet, or timed out).
   const [guard, setGuard] = useState(null)
   const [notice, setNotice] = useState(null)
+  // The user's own goal, category and account names the guard was built from, so a
+  // choice that starts a question (P5) can be turned into that question.
+  const [guardLists, setGuardLists] = useState(null)
+  // A calculated answer to a question (P5), shown in place of the text box.
+  const [answer, setAnswer] = useState(null)
+
+  // Answers one complete question. It never falls back to the entry flow: a question
+  // that cannot be read gives the "couldn't read your data" answer and no number.
+  const answerFor = async (request) => {
+    try {
+      const data = await readQueryData(request, user.id)
+      return answerQuery(request, data, Date.now(), { formatMoney: formatCurrency })
+    } catch {
+      return dataProblemAnswer()
+    }
+  }
 
   // `options.skipGuard` is only used when the user explicitly chose "record it as an
   // expense"; the button passes a click event here, which has no such property.
@@ -78,6 +153,7 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       // fall back to the normal flow (which still needs confirmation) rather than block it.
       if (!skipGuard) {
         let interpreted = null
+        let lists = null
         try {
           const goals = nameList((goalsRes.error ? [] : goalsRes.data || []).filter((g) => g.status !== 'archived'))
           const learningItems = nameList(learningRes.error ? [] : learningRes.data)
@@ -93,11 +169,25 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
             },
             Date.now(),
           )
+          lists = { goals, categories: nameList(categories), accounts: nameList(accounts) }
         } catch {
           interpreted = null
         }
         if (interpreted && interpreted.kind !== 'transaction') {
+          // A complete question that is built (P5) is answered here; anything else
+          // stays in the guard panel.
+          let request = null
+          try {
+            request = requestFromResult(interpreted)
+          } catch {
+            request = null
+          }
+          if (request) {
+            setAnswer(await answerFor(request))
+            return
+          }
           setGuard(interpreted)
+          setGuardLists(lists)
           return
         }
       }
@@ -138,6 +228,8 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
   const handleFlowClose = () => {
     setReviewState(null)
     setGuard(null)
+    setGuardLists(null)
+    setAnswer(null)
     setNotice(null)
     setText('')
     onSaved?.()
@@ -145,7 +237,7 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
   }
 
   // What a button on the guard panel does (decided in lib/command/guardView.js).
-  const handleGuardChoice = (choiceId) => {
+  const handleGuardChoice = async (choiceId) => {
     let outcome
     try {
       outcome = resolveGuardChoice(guard, choiceId, Date.now())
@@ -162,9 +254,31 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
     } else if (outcome.action === 'continue_as_transaction') {
       setNotice(null)
       handleParse({ skipGuard: true })
+    } else if (outcome.action === 'start') {
+      // One of the built questions (P5). Anything that can no longer be found says so.
+      setNotice(null)
+      const request = queryFromChoice(outcome.choiceId, guardLists, initialDate ? new Date(initialDate) : new Date())
+      if (!request) {
+        setNotice(QUERY_MESSAGES.choiceGone)
+        return
+      }
+      setLoading(true)
+      setAnswer(await answerFor(request))
+      setLoading(false)
     } else {
       setNotice(outcome.message || null)
     }
+  }
+
+  // The answer view's two buttons (P5). Neither saves anything.
+  const handleAskAgain = () => {
+    setAnswer(null)
+    setText('')
+  }
+  const handleAnswerClose = () => {
+    setAnswer(null)
+    setText('')
+    onClose?.()
   }
 
   if (reviewState) {
@@ -198,7 +312,9 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         )}
       </div>
 
-      {guard ? (
+      {answer ? (
+        <QueryResultDialog answer={answer} onAskAgain={handleAskAgain} onClose={handleAnswerClose} />
+      ) : guard ? (
         <CommandGuardPanel view={buildGuardView(guard)} onChoose={handleGuardChoice} />
       ) : (
         <>
