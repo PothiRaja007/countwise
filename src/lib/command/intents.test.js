@@ -190,8 +190,8 @@ test('I8: exactly six allowed pages, each a real route, and none of the excluded
   assert.throws(() => I.pageRoute('settings'))
 })
 
-test('I9: availability — with BUILT_THROUGH = P1 only today\'s path is available; unknown phases and intents throw', () => {
-  assert.strictEqual(I.BUILT_THROUGH, 'P1')
+test('I9: availability — with BUILT_THROUGH = P4 only today\'s path is available; unknown phases and intents throw', () => {
+  assert.strictEqual(I.BUILT_THROUGH, 'P4')
   assert.deepStrictEqual(I.INTENT_IDS.filter((id) => I.isIntentAvailable(id)), ['RECORD_TRANSACTION'])
   assert.ok(I.phaseIndex('P0') < I.phaseIndex('P1') && I.phaseIndex('P9') < I.phaseIndex('P10'))
   assert.strictEqual(I.PHASE_ORDER.length, 14)
@@ -201,7 +201,7 @@ test('I9: availability — with BUILT_THROUGH = P1 only today\'s path is availab
 
 test('I10: the folder is pure — only the three known modules, importing only each other, with no clock, randomness or database', () => {
   const files = readdirSync(HERE).filter((f) => f.endsWith('.js') && !f.endsWith('.test.js')).sort()
-  assert.deepStrictEqual(files, ['amountReader.js', 'entityResolver.js', 'expectedRouting.js', 'intents.js', 'interpreter.js', 'pendingAction.js', 'periodParser.js'], 'a new module needs a deliberate review')
+  assert.deepStrictEqual(files, ['amountReader.js', 'entityResolver.js', 'expectedRouting.js', 'guardView.js', 'intents.js', 'interpreter.js', 'pendingAction.js', 'periodParser.js'], 'a new module needs a deliberate review')
   for (const f of files) {
     const code = stripComments(readFileSync(fileURLToPath(new URL(f, HERE)), 'utf8'))
     const specs = [...code.matchAll(/import\s[^;]*?from\s*['"]([^'"]+)['"]|import\s*['"]([^'"]+)['"]/g)].map((m) => m[1] || m[2])

@@ -9,8 +9,17 @@ import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
 import Input from '../ui/Input.jsx'
 import ReviewDrawer from './ReviewDrawer.jsx'
+import CommandGuardPanel from './CommandGuardPanel.jsx'
+import { interpret } from '../../lib/command/interpreter.js'
+import { buildGuardView, resolveGuardChoice } from '../../lib/command/guardView.js'
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
+
+// The command guard reads names from the user's own lists. A row without a usable
+// id and name is left out, so one bad row can never switch the guard off.
+const nameList = (rows) => (rows || [])
+  .filter((r) => r && r.id != null && typeof r.name === 'string' && r.name.trim())
+  .map((r) => ({ id: String(r.id), name: r.name }))
 
 export default function MoneyInboxInput({ onClose, embedded = false, onSaved, initialDate, initialText = '' }) {
   const { user } = useAuth()
@@ -23,13 +32,23 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
   // drawer instead of the text panel.
   const [reviewState, setReviewState] = useState(null)
 
-  const handleParse = async () => {
+  // Command guard (P4): set when the message was a command, question, page
+  // request or unclear, instead of an entry. `notice` explains, in plain words,
+  // why the user is back at the text box (not available yet, or timed out).
+  const [guard, setGuard] = useState(null)
+  const [notice, setNotice] = useState(null)
+
+  // `options.skipGuard` is only used when the user explicitly chose "record it as an
+  // expense"; the button passes a click event here, which has no such property.
+  const handleParse = async (options) => {
+    const skipGuard = options?.skipGuard === true
     if (!text.trim() || !user) return
     setLoading(true)
     setError(null)
+    setNotice(null)
 
     try {
-      const [accountsRes, rulesRes, categoriesRes, recentRes] = await Promise.all([
+      const [accountsRes, rulesRes, categoriesRes, recentRes, goalsRes, learningRes] = await Promise.all([
         supabase.from('accounts').select('id, name, type').eq('user_id', user.id).eq('is_active', true),
         supabase.from('category_rules').select('keyword, category_id, priority').or(`user_id.eq.${user.id},user_id.is.null`),
         supabase.from('categories').select('id, name, kind').or(`user_id.eq.${user.id},user_id.is.null`),
@@ -38,6 +57,10 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
           .select('amount, description, original_input, created_at')
           .eq('user_id', user.id)
           .gte('created_at', new Date(Date.now() - FIFTEEN_MINUTES_MS).toISOString()),
+        // Read-only, for the command guard only. A failure here is ignored: the
+        // normal entry flow never needs these lists.
+        supabase.from('goals').select('id, name, status').eq('user_id', user.id),
+        supabase.from('learning_items').select('id, name').eq('user_id', user.id),
       ])
 
       if (accountsRes.error) throw accountsRes.error
@@ -49,6 +72,35 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       const categoryRules = rulesRes.data || []
       const categories = categoriesRes.data || []
       const recentTransactions = recentRes.data || []
+
+      // Command guard (P4): decide first whether this is an entry at all. Only
+      // "transaction" continues below, exactly as before. If the guard itself fails,
+      // fall back to the normal flow (which still needs confirmation) rather than block it.
+      if (!skipGuard) {
+        let interpreted = null
+        try {
+          const goals = nameList((goalsRes.error ? [] : goalsRes.data || []).filter((g) => g.status !== 'archived'))
+          const learningItems = nameList(learningRes.error ? [] : learningRes.data)
+          interpreted = interpret(
+            text,
+            {
+              id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `guard-${Date.now()}`,
+              referenceDate: initialDate ? new Date(initialDate) : new Date(),
+              goals,
+              categories: nameList(categories),
+              learningItems,
+              accounts: nameList(accounts),
+            },
+            Date.now(),
+          )
+        } catch {
+          interpreted = null
+        }
+        if (interpreted && interpreted.kind !== 'transaction') {
+          setGuard(interpreted)
+          return
+        }
+      }
 
       const candidates = buildReviewCandidates(text, {
         // Full {id, name, type} objects — type is what lets a generic word
@@ -85,9 +137,34 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
   // then notifying the parent, handles both cases correctly.
   const handleFlowClose = () => {
     setReviewState(null)
+    setGuard(null)
+    setNotice(null)
     setText('')
     onSaved?.()
     onClose?.()
+  }
+
+  // What a button on the guard panel does (decided in lib/command/guardView.js).
+  const handleGuardChoice = (choiceId) => {
+    let outcome
+    try {
+      outcome = resolveGuardChoice(guard, choiceId, Date.now())
+    } catch {
+      setGuard(null)
+      return
+    }
+    setGuard(null)
+    if (outcome.action === 'cancel') {
+      setNotice(null)
+      setText('')
+    } else if (outcome.action === 'edit') {
+      setNotice(null)
+    } else if (outcome.action === 'continue_as_transaction') {
+      setNotice(null)
+      handleParse({ skipGuard: true })
+    } else {
+      setNotice(outcome.message || null)
+    }
   }
 
   if (reviewState) {
@@ -121,6 +198,10 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         )}
       </div>
 
+      {guard ? (
+        <CommandGuardPanel view={buildGuardView(guard)} onChoose={handleGuardChoice} />
+      ) : (
+        <>
       <p className="text-sm text-muted dark:text-mutedDark">
         Tell CountWise what happened with your money, all in one message.
       </p>
@@ -159,6 +240,8 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         </div>
       </details>
 
+      {notice && <p className="text-sm text-muted dark:text-mutedDark">{notice}</p>}
+
       {error && <p className="text-sm text-bad">{error}</p>}
 
       {/* Money-Inbox-entry-points rebuild: this is the embedded panel's
@@ -180,6 +263,8 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
           {loading ? 'Reading...' : 'Review'}
         </Button>
       </div>
+        </>
+      )}
     </div>
   )
 
