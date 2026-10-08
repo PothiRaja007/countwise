@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
@@ -21,6 +21,7 @@ import { applyReferenceMemory } from '../../lib/command/commandContext.js'
 import { memoryFor, putHandoff } from '../../lib/commandSession.js'
 import { goalCommandView, resolveGoalCommandChoice, choiceNotice, GOAL_COMMAND_MESSAGES } from '../../lib/command/goalCommands.js'
 import { learningCommandView, resolveLearningCommandChoice, learningChoiceNotice, LEARNING_COMMAND_MESSAGES } from '../../lib/command/learningCommands.js'
+import { detectLearningPayment, learningOfferView, learningOfferPending, LEARNING_OFFER_CHOICES, LEARNING_OFFER_MESSAGES } from '../../lib/command/learningOffer.js'
 import { budgetCommandView, resolveBudgetCommandChoice, budgetChoiceNotice, BUDGET_COMMAND_MESSAGES } from '../../lib/command/budgetCommands.js'
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
@@ -87,6 +88,29 @@ async function readQueryData(request, userId) {
   return data
 }
 
+// The optional offer after a saved learning payment (P8b). Two buttons; neither saves anything here.
+function LearningOfferPanel({ view, onChoose }) {
+  return (
+    <div className="space-y-3" role="region" aria-live="polite" aria-label="Track this in Learning ROI">
+      <h3 className="text-sm font-medium text-ink dark:text-offwhite">{view.title}</h3>
+      <p className="text-xs text-muted dark:text-mutedDark">{view.footer}</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        {view.choices.map((choice) => (
+          <Button
+            key={choice.id}
+            type="button"
+            variant={choice.id === LEARNING_OFFER_CHOICES.skip ? 'secondary' : 'primary'}
+            onClick={() => onChoose(choice.id)}
+            className="px-3 py-2 rounded-lg"
+          >
+            {choice.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function MoneyInboxInput({ onClose, embedded = false, onSaved, initialDate, initialText = '' }) {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -109,6 +133,10 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
   const [guardLists, setGuardLists] = useState(null)
   // A calculated answer to a question (P5), shown in place of the text box.
   const [answer, setAnswer] = useState(null)
+  // P8b: the optional "track it in Learning ROI" offer, shown only after a single learning payment was really
+  // saved. The rows the review screen reports as saved are collected here until it closes.
+  const [offer, setOffer] = useState(null)
+  const savedRowsRef = useRef([])
 
   // Answers one complete question. It never falls back to the entry flow: a question
   // that cannot be read gives the "couldn't read your data" answer and no number.
@@ -130,6 +158,7 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
     setGuard(null)
     setGuardLists(null)
     setAnswer(null)
+    setOffer(null)
     setNotice(null)
     setText('')
     onClose?.()
@@ -262,6 +291,24 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
   // would keep rendering ReviewDrawer forever. Resetting locally first,
   // then notifying the parent, handles both cases correctly.
   const handleFlowClose = () => {
+    // P8b: one entry, really saved, and it was a learning payment: keep the panel open and offer the
+    // Learning ROI follow-up. Everything else (a dismissed review, several entries, any other payment)
+    // takes the path below exactly as before.
+    const savedRows = savedRowsRef.current
+    savedRowsRef.current = []
+    const learningOffer = reviewState && reviewState.candidates.length === 1 ? detectLearningPayment(savedRows) : null
+    if (learningOffer) {
+      setReviewState(null)
+      setGuard(null)
+      setGuardLists(null)
+      setAnswer(null)
+      setNotice(null)
+      setText('')
+      setOffer(learningOffer)
+      onSaved?.()
+      return
+    }
+    setOffer(null)
     setReviewState(null)
     setGuard(null)
     setGuardLists(null)
@@ -429,6 +476,36 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
     }
   }
 
+  // The offer's two buttons (P8b). "Open Learning ROI" only PREPARES the handoff and opens the Learning page,
+  // which confirms and saves with its own form; "No thanks" writes nothing. The payment was saved already.
+  const handleOfferChoice = (choiceId) => {
+    if (choiceId === LEARNING_OFFER_CHOICES.open && offer) {
+      let destination = null
+      try {
+        const handoff = putHandoff(
+          learningOfferPending(offer, { id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `offer-${Date.now()}`, now: Date.now() }),
+          user.id,
+          Date.now(),
+        )
+        destination = navigationFromChoice(`open_${handoff.page}`)
+      } catch {
+        destination = null
+      }
+      if (destination) {
+        goTo(destination)
+        return
+      }
+      setOffer(null)
+      setNotice(LEARNING_OFFER_MESSAGES.couldNotOpen)
+      return
+    }
+    if (choiceId === LEARNING_OFFER_CHOICES.skip) {
+      setOffer(null)
+      setText('')
+      onClose?.()
+    }
+  }
+
   // The answer view's two buttons (P5). Neither saves anything.
   const handleAskAgain = () => {
     setAnswer(null)
@@ -446,8 +523,9 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         candidates={reviewState.candidates}
         accounts={reviewState.accounts}
         categories={reviewState.categories}
-        onBack={() => setReviewState(null)}
+        onBack={() => { savedRowsRef.current = []; setReviewState(null) }}
         onClose={handleFlowClose}
+        onSaved={(rows) => { savedRowsRef.current = [...savedRowsRef.current, ...rows] }}
       />
     )
   }
@@ -475,6 +553,8 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         <QueryResultDialog answer={answer} onAskAgain={handleAskAgain} onClose={handleAnswerClose} />
       ) : guard ? (
         <CommandGuardPanel view={budgetCommandView(learningCommandView(goalCommandView(buildGuardView(guard), guard, guardLists?.activeGoals, Date.now()), guard, guardLists?.learningItems, Date.now()), guard, guardLists?.expenseCategories, Date.now())} onChoose={handleGuardChoice} />
+      ) : offer ? (
+        <LearningOfferPanel view={learningOfferView(offer)} onChoose={handleOfferChoice} />
       ) : (
         <>
       <p className="text-sm text-muted dark:text-mutedDark">

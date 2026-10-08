@@ -49,7 +49,7 @@ function canConfirmRow(row) {
   return true
 }
 
-export default function ReviewDrawer({ candidates, accounts, categories, onBack, onClose }) {
+export default function ReviewDrawer({ candidates, accounts, categories, onBack, onClose, onSaved }) {
   const { user } = useAuth()
   const titleId = useId()
   const [rows, setRows] = useState(() =>
@@ -125,6 +125,10 @@ export default function ReviewDrawer({ candidates, accounts, categories, onBack,
       setError(friendlyError(insertErr, "Couldn't save these transactions. Please try again."))
       return
     }
+
+    // P8b: after a REAL save, tell an interested parent which rows were saved. Optional, and never part of
+    // saving: it runs after the insert has succeeded, and a callback that fails cannot change the result.
+    try { onSaved?.(payload.map((row) => ({ ...row }))) } catch { /* the save already happened */ }
 
     const confirmedKeys = new Set(toInsert.map((r) => r.key))
     const remaining = rows.filter((r) => !confirmedKeys.has(r.key))

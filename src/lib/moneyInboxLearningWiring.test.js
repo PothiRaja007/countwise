@@ -46,7 +46,7 @@ const choice = between(code, 'const handleGuardChoice = async (choiceId) => {', 
 
 test('W1: Money Inbox never writes; it prepares a handoff in exactly two places (goal and learning), both inside the choice handler', () => {
   assert.ok(!/\.(insert|update|upsert|delete|rpc)\(/.test(code), 'no write or rpc in MoneyInboxInput')
-  assert.equal((code.match(/putHandoff\(/g) || []).length, 3, 'P9 adds the budget hand-off')
+  assert.equal((code.match(/putHandoff\(/g) || []).length, 4, 'P9 adds the budget hand-off; P8b adds the learning-payment offer hand-off')
   assert.equal((choice.match(/putHandoff\(/g) || []).length, 3)
   assert.equal((code.match(/\.from\('/g) || []).length, 14, 'P8 adds no read: the learning list only gained its status column')
   assert.ok(code.includes("supabase.from('learning_items').select('id, name, status').eq('user_id', user.id)"), 'a read-only list of this user\'s own items')
@@ -59,7 +59,7 @@ test('W2: Continue = putHandoff, then the route from the page table, then goTo â
   const n = branch.indexOf('navigationFromChoice(`open_${handoff.page}`)')
   const g = branch.indexOf('goTo(destination)')
   assert.ok(p > 0 && n > p && g > n)
-  assert.equal((code.match(/\bgoTo\(/g) || []).length, 5, 'P9 adds the budget hand-off')
+  assert.equal((code.match(/\bgoTo\(/g) || []).length, 6, 'P9 adds the budget hand-off; P8b adds the offer hand-off')
   assert.equal((code.match(/navigate\(/g) || []).length, 1)
   assert.ok(!/'\/learning'/.test(code), 'no route is written in Money Inbox: it comes from ALLOWED_PAGES')
   assert.ok(/catch \{\s*destination = null\s*\}/.test(branch) && /setNotice\(LEARNING_COMMAND_MESSAGES\.expired\)/.test(branch))
@@ -135,9 +135,10 @@ test('W8: Learning keeps no memory (decision 6) and imports only the hook and th
   assert.deepEqual(imports, ['../lib/useHandoff.js', '../lib/command/learningDialog.js'])
 })
 
-test('W9: ReviewDrawer and the transaction path are untouched â€” the payment follow-up is P8b, not P8', () => {
-  assert.equal(sha(read('components/money-inbox/ReviewDrawer.jsx')), 'bf5d28f080bd435c')
-  assert.ok(!/RECORD_LEARNING_PAYMENT|learningOffer|detectLearningPayment/.test(code + pageCode))
+test('W9: the transaction path is untouched; ReviewDrawer changed only by the P8b onSaved prop', () => {
+  assert.equal(sha(read('components/money-inbox/ReviewDrawer.jsx')), 'bd2bb99ef98ea9c2')
+  assert.ok(!/RECORD_LEARNING_PAYMENT/.test(code + pageCode), 'the declared-but-unrouted intent is still not used')
+  assert.ok(!/learningOffer|detectLearningPayment/.test(pageCode), 'the Learning page knows nothing of the offer')
   const START = 'const candidates = buildReviewCandidates(text, {'
   const END = 'setReviewState({ candidates, accounts, categories })'
   const a = input.indexOf(START), e = input.indexOf(END)

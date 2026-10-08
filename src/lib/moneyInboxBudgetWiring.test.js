@@ -51,7 +51,7 @@ const choice = between(code, 'const handleGuardChoice = async (choiceId) => {', 
 
 test('X1: Money Inbox never writes; it prepares a handoff in exactly three places (goal, learning, budget), all inside the choice handler', () => {
   assert.ok(!/\.(insert|update|upsert|delete|rpc)\(/.test(code), 'no write or rpc in MoneyInboxInput')
-  assert.equal((code.match(/putHandoff\(/g) || []).length, 3)
+  assert.equal((code.match(/putHandoff\(/g) || []).length, 4, 'P8b adds the offer hand-off outside the choice handler')
   assert.equal((choice.match(/putHandoff\(/g) || []).length, 3)
   assert.equal((code.match(/\.from\('/g) || []).length, 14, 'P9 adds no read: spending categories come from the categories list it already reads')
   assert.ok(code.includes("c.kind === 'expense'"), 'spending categories are picked from the rows already read')
@@ -65,7 +65,7 @@ test('X2: Continue = putHandoff, then the route from the page table, then goTo â
   const g = branch.indexOf('goTo(destination)')
   assert.ok(p > 0 && n > p && g > n, 'put, then route, then go')
   assert.equal((branch.match(/goTo\(/g) || []).length, 1)
-  assert.equal((code.match(/\bgoTo\(/g) || []).length, 5)
+  assert.equal((code.match(/\bgoTo\(/g) || []).length, 6, 'P8b adds the offer hand-off')
   assert.equal((code.match(/navigate\(/g) || []).length, 1, 'the router is still called in exactly one place (goTo)')
   assert.ok(!/'\/budgets'/.test(code), 'no route is written in Money Inbox: it comes from ALLOWED_PAGES')
   assert.ok(/catch \{\s*destination = null\s*\}/.test(branch) && /setNotice\(BUDGET_COMMAND_MESSAGES\.expired\)/.test(branch))
@@ -183,7 +183,7 @@ test('X11: locked files are byte-for-byte what they were; ReviewDrawer and the t
   const pins = {
     'lib/budgetRecipe.js': 'cc273e25d97dad28', 'lib/budgetSave.js': 'e2499dfb17cba90d', 'lib/budgetEngine.js': '50142395b7358185',
     'lib/command/interpreter.js': 'ea8273109afea4f9', 'lib/command/handoff.js': '729b0d35a5a0d999', 'lib/commandSession.js': '41bd5a720a25ae56',
-    'lib/useHandoff.js': 'a5771b309e68f7ac', 'components/money-inbox/ReviewDrawer.jsx': 'bf5d28f080bd435c',
+    'lib/useHandoff.js': 'a5771b309e68f7ac', 'components/money-inbox/ReviewDrawer.jsx': 'bd2bb99ef98ea9c2' /* P8b: one optional onSaved prop, called after a real save */,
   }
   for (const [file, expected] of Object.entries(pins)) assert.equal(sha(read(file)), expected, file)
   const START = 'const candidates = buildReviewCandidates(text, {'

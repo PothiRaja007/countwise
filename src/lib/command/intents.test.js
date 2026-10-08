@@ -204,7 +204,7 @@ test('I9: availability — with BUILT_THROUGH = P7 today\'s path, the two goal c
 
 test('I10: the folder is pure — only the known modules, importing only each other, with no clock, randomness or database', () => {
   const files = readdirSync(HERE).filter((f) => f.endsWith('.js') && !f.endsWith('.test.js')).sort()
-  assert.deepStrictEqual(files, ['amountReader.js', 'budgetCommands.js', 'budgetDialog.js', 'commandContext.js', 'entityResolver.js', 'expectedRouting.js', 'goalCommands.js', 'goalDialog.js', 'guardView.js', 'handoff.js', 'intents.js', 'interpreter.js', 'learningCommands.js', 'learningDialog.js', 'pendingAction.js', 'periodParser.js', 'queries.js'], 'a new module needs a deliberate review')
+  assert.deepStrictEqual(files, ['amountReader.js', 'budgetCommands.js', 'budgetDialog.js', 'commandContext.js', 'entityResolver.js', 'expectedRouting.js', 'goalCommands.js', 'goalDialog.js', 'guardView.js', 'handoff.js', 'intents.js', 'interpreter.js', 'learningCommands.js', 'learningDialog.js', 'learningOffer.js', 'pendingAction.js', 'periodParser.js', 'queries.js'], 'a new module needs a deliberate review')
   for (const f of files) {
     const code = stripComments(readFileSync(fileURLToPath(new URL(f, HERE)), 'utf8'))
     const specs = [...code.matchAll(/import\s[^;]*?from\s*['"]([^'"]+)['"]|import\s*['"]([^'"]+)['"]/g)].map((m) => m[1] || m[2])
