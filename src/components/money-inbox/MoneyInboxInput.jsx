@@ -21,6 +21,7 @@ import { applyReferenceMemory } from '../../lib/command/commandContext.js'
 import { memoryFor, putHandoff } from '../../lib/commandSession.js'
 import { goalCommandView, resolveGoalCommandChoice, choiceNotice, GOAL_COMMAND_MESSAGES } from '../../lib/command/goalCommands.js'
 import { learningCommandView, resolveLearningCommandChoice, learningChoiceNotice, LEARNING_COMMAND_MESSAGES } from '../../lib/command/learningCommands.js'
+import { budgetCommandView, resolveBudgetCommandChoice, budgetChoiceNotice, BUDGET_COMMAND_MESSAGES } from '../../lib/command/budgetCommands.js'
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
 
@@ -196,7 +197,9 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
           interpreted = applyReferenceMemory(interpreted, memoryFor(user.id), activeGoals, user.id, Date.now())
           // P8 — the user's learning items WITH their status, for the buttons of a learning command.
           const learningWithStatus = (learningRes.error ? [] : learningRes.data || []).filter((r) => r && r.id != null && typeof r.name === 'string' && r.name.trim()).map((r) => ({ id: String(r.id), name: r.name, status: r.status }))
-          lists = { goals, activeGoals, learningItems: learningWithStatus, categories: nameList(categories), accounts: nameList(accounts) }
+          // P9 — spending categories only, for the buttons of a budget command.
+          const expenseCategories = nameList(categories.filter((c) => c && c.kind === 'expense'))
+          lists = { goals, activeGoals, learningItems: learningWithStatus, expenseCategories, categories: nameList(categories), accounts: nameList(accounts) }
         } catch {
           interpreted = null
         }
@@ -338,6 +341,39 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       setGuard(null)
       return
     }
+    // The buttons of a budget command (P9) are decided in lib/command/budgetCommands.js, the same way:
+    // Continue only PREPARES the handoff and opens the Budgets page, which confirms and saves.
+    const budgetOutcome = resolveBudgetCommandChoice(guard, choiceId, guardLists?.expenseCategories, Date.now())
+    if (budgetOutcome.action === 'hand_off') {
+      let destination = null
+      try {
+        const handoff = putHandoff(budgetOutcome.pending, user.id, Date.now())
+        destination = navigationFromChoice(`open_${handoff.page}`)
+      } catch {
+        destination = null
+      }
+      if (destination) {
+        goTo(destination)
+        return
+      }
+      setGuard(null)
+      setNotice(BUDGET_COMMAND_MESSAGES.expired)
+      return
+    }
+    if (budgetOutcome.action === 'pick_category') {
+      setNotice(null)
+      setGuard(budgetOutcome.result)
+      return
+    }
+    if (budgetOutcome.action === 'expired' || budgetOutcome.action === 'unavailable') {
+      setGuard(null)
+      setNotice(budgetOutcome.message)
+      return
+    }
+    if (budgetOutcome.action === 'unknown') {
+      setGuard(null)
+      return
+    }
     let outcome
     try {
       outcome = resolveGuardChoice(guard, choiceId, Date.now())
@@ -367,6 +403,12 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       const learningNotice = outcome.intent === 'CREATE_LEARNING_ITEM' || outcome.intent === 'MODIFY_LEARNING_STATUS' ? learningChoiceNotice(outcome.choiceId, guardLists?.learningItems) : null
       if (learningNotice) {
         setNotice(learningNotice)
+        return
+      }
+      // "Create a monthly budget" / "Set a budget amount" buttons carry no details either (P9).
+      const budgetNotice = outcome.intent === 'CREATE_BUDGET_MONTH' || outcome.intent === 'MODIFY_BUDGET_AMOUNT' ? budgetChoiceNotice(outcome.choiceId) : null
+      if (budgetNotice) {
+        setNotice(budgetNotice)
         return
       }
       const destination = outcome.intent === 'NAVIGATE' ? navigationFromChoice(outcome.choiceId) : null
@@ -432,7 +474,7 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       {answer ? (
         <QueryResultDialog answer={answer} onAskAgain={handleAskAgain} onClose={handleAnswerClose} />
       ) : guard ? (
-        <CommandGuardPanel view={learningCommandView(goalCommandView(buildGuardView(guard), guard, guardLists?.activeGoals, Date.now()), guard, guardLists?.learningItems, Date.now())} onChoose={handleGuardChoice} />
+        <CommandGuardPanel view={budgetCommandView(learningCommandView(goalCommandView(buildGuardView(guard), guard, guardLists?.activeGoals, Date.now()), guard, guardLists?.learningItems, Date.now()), guard, guardLists?.expenseCategories, Date.now())} onChoose={handleGuardChoice} />
       ) : (
         <>
       <p className="text-sm text-muted dark:text-mutedDark">

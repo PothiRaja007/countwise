@@ -68,12 +68,12 @@ test('G2: every choice does the right thing — cancel, edit, continue, unavaila
   for (const [text, id] of [['I need 50000 for a laptop', 'create_goal'], ['goal', 'create_goal']]) {
     assert.deepStrictEqual(resolveGuardChoice(run(text), id, NOW), { action: 'start', intent: 'CREATE_GOAL', choiceId: id }, `${text} → ${id}`)
   }
-  // Learning commands are built (P8), so their buttons start too; budgets, salary and pension wait for P9/P10.
+  // Learning commands (P8) and budget commands (P9) are built, so their buttons start too; salary and pension wait for P10.
   for (const [text, id, intent] of [['Power BI', 'learning_status_l1', 'MODIFY_LEARNING_STATUS'], ['learning', 'add_learning', 'CREATE_LEARNING_ITEM']]) {
     assert.deepStrictEqual(resolveGuardChoice(run(text), id, NOW), { action: 'start', intent, choiceId: id }, `${text} → ${id}`)
   }
-  for (const id of run('budget').clarification.choices.map((c) => c.id).filter((c) => c !== 'open_budgets' && c !== 'cancel' && c !== 'edit')) {
-    assert.deepStrictEqual(resolveGuardChoice(run('budget'), id, NOW).action, 'unavailable', `budget → ${id} (P9)`)
+  for (const [id, intent] of [['create_budget', 'CREATE_BUDGET_MONTH']]) {
+    assert.deepStrictEqual(resolveGuardChoice(run('budget'), id, NOW), { action: 'start', intent, choiceId: id }, `budget → ${id} (P9)`)
   }
   // Opening a page (P6) starts instead: the screen navigates. Nothing else about the choice changes.
   assert.deepStrictEqual(resolveGuardChoice(run('salary'), 'open_salary', NOW), { action: 'start', intent: 'NAVIGATE', choiceId: 'open_salary' })
@@ -223,8 +223,8 @@ test('G9: determinism — the same result gives the same panel', () => {
 })
 
 test('G10: availability follows BUILT_THROUGH — a normal transaction, the goal and learning commands, the four built questions and opening a page; an available intent would start', () => {
-  assert.strictEqual(BUILT_THROUGH, 'P8')
-  assert.deepStrictEqual(Object.keys(CONTRACTS).filter((id) => isIntentAvailable(id)), ['RECORD_TRANSACTION', 'RECORD_LEARNING_PAYMENT', 'CREATE_GOAL', 'MODIFY_GOAL_CONTRIBUTE', 'CREATE_LEARNING_ITEM', 'MODIFY_LEARNING_STATUS', 'QUERY_SPEND', 'QUERY_BUDGET_LEFT', 'QUERY_GOAL_PROGRESS', 'QUERY_BALANCE', 'NAVIGATE'])
+  assert.strictEqual(BUILT_THROUGH, 'P9')
+  assert.deepStrictEqual(Object.keys(CONTRACTS).filter((id) => isIntentAvailable(id)), ['RECORD_TRANSACTION', 'RECORD_LEARNING_PAYMENT', 'CREATE_GOAL', 'MODIFY_GOAL_CONTRIBUTE', 'CREATE_BUDGET_MONTH', 'MODIFY_BUDGET_AMOUNT', 'CREATE_LEARNING_ITEM', 'MODIFY_LEARNING_STATUS', 'QUERY_SPEND', 'QUERY_BUDGET_LEFT', 'QUERY_GOAL_PROGRESS', 'QUERY_BALANCE', 'NAVIGATE'])
   const r = run('I need 50000 for a laptop')
   assert.deepStrictEqual(resolveGuardChoice(r, 'create_goal', NOW, () => true), { action: 'start', intent: 'CREATE_GOAL', choiceId: 'create_goal' })
   assert.deepStrictEqual(resolveGuardChoice(r, 'create_goal', NOW, () => false), { action: 'unavailable', message: GUARD_MESSAGES.unavailable })
@@ -240,7 +240,7 @@ test('G11: a built question with something still open asks for one more detail; 
   // A goal command is built (P7). The base view words every built request that is not a question as "one more
   // detail"; lib/command/goalCommands.js replaces that footer for a ready goal command (guardView.js stays as it was).
   assert.strictEqual(view('Create a goal for a laptop worth 50000').footer, GUARD_MESSAGES.needDetail)
-  assert.strictEqual(view('Create a budget for next month').footer, GUARD_MESSAGES.footer) // budgets wait for P9
+  assert.strictEqual(view('Create a budget for next month').footer, GUARD_MESSAGES.needDetail) // budget commands are built (P9); lib/command/budgetCommands.js words a ready one
   // Opening a page is built (P6). A complete request navigates straight away and never shows this panel; only an
   // unclear page would, and then it asks for one more detail like any other built request.
   assert.strictEqual(view('Open my goals').footer, GUARD_MESSAGES.needDetail)

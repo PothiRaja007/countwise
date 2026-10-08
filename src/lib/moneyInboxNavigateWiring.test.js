@@ -48,7 +48,7 @@ test('N1: a page opens only after interpret(), only for a complete request, and 
   const e = code.indexOf('buildReviewCandidates(text')
   assert.ok(i > 0 && m > i && n > m && r > n && e > r, 'interpret → reference memory → navigation → question → entry flow, in that order')
   assert.equal((code.match(/navigate\(/g) || []).length, 1, 'the router is called in exactly one place (goTo)')
-  assert.equal((code.match(/\bgoTo\(/g) || []).length, 4, 'goTo is called from the typed request, from a page choice, from a goal hand-off (P7) and from a learning hand-off (P8), nowhere else')
+  assert.equal((code.match(/\bgoTo\(/g) || []).length, 5, 'goTo is called from the typed request, from a page choice, from a goal hand-off (P7), a learning hand-off (P8) and a budget hand-off (P9), nowhere else')
   assert.ok(/const destination = navigationFromResult\(interpreted\)\s*if \(destination\) \{\s*goTo\(destination\)\s*return\s*\}/.test(code), 'a page request ends there')
   assert.ok(/useNavigate\(\)/.test(code), 'the router hook is used')
   assert.equal((code.match(/navigationFromResult\(/g) || []).length, 1)
@@ -78,7 +78,7 @@ test('N4: the remembered goal is applied after interpret() and before a question
   assert.ok(/interpreted = applyReferenceMemory\(interpreted, memoryFor\(user\.id\), activeGoals, user\.id, Date\.now\(\)\)/.test(code), 'P7: only ACTIVE goals can be "it"')
   assert.ok(code.indexOf('applyReferenceMemory(') > code.indexOf('interpreted = interpret(') && code.indexOf('applyReferenceMemory(') < code.indexOf('lists = {'), 'applied inside the guard\'s own try, right after interpret')
   assert.ok(!/\bremember\(|rememberGoal\(|takeHandoff\(|clearCommandSession\(/.test(code), 'Money Inbox only reads the memory; owner pages write it (P7: the Goals page)')
-  assert.equal((code.match(/putHandoff\(/g) || []).length, 2, 'P8: Money Inbox prepares a handoff in exactly two places (the goal and learning commands\' Continue buttons)')
+  assert.equal((code.match(/putHandoff\(/g) || []).length, 3, 'P9: Money Inbox prepares a handoff in exactly three places (the goal, learning and budget commands\' Continue buttons)')
   assert.ok(!/useHandoff/.test(code), 'Money Inbox does not read handoffs')
   assert.equal((code.match(/commandSession\.js/g) || []).length, 1)
   assert.ok(/import \{ memoryFor, putHandoff \} from '\.\.\/\.\.\/lib\/commandSession\.js'/.test(code), 'it imports exactly memoryFor and putHandoff')
@@ -105,7 +105,7 @@ test('N6: signing out clears the command session, before the sign-out call', () 
   assert.equal((auth.match(/clearCommandSession/g) || []).length, 2, 'one import and one call, nothing more')
 })
 
-test('N7: only the Goals (P7) and Learning (P8) pages use the handoff hook, and only Goals writes the memory; only the known files import the new modules', () => {
+test('N7: only the Goals (P7), Learning (P8) and Budgets (P9) pages use the handoff hook, and only Goals writes the memory; only the known files import the new modules', () => {
   const importers = { 'commandSession.js': [], 'useHandoff.js': [], 'handoff.js': [], 'commandContext.js': [] }
   const walk = (dir) => {
     for (const name of readdirSync(dir)) {
@@ -122,10 +122,10 @@ test('N7: only the Goals (P7) and Learning (P8) pages use the handoff hook, and 
   }
   walk(SRC)
   assert.deepEqual(importers['commandSession.js'].sort(), [INPUT, 'lib/AuthContext.jsx', 'lib/useHandoff.js', 'pages/Goals.jsx'].sort())
-  assert.deepEqual(importers['useHandoff.js'].sort(), ['pages/Goals.jsx', 'pages/LearningROI.jsx'], 'only the Goals (P7) and Learning (P8) pages use the hook')
+  assert.deepEqual(importers['useHandoff.js'].sort(), ['pages/Budgets.jsx', 'pages/Goals.jsx', 'pages/LearningROI.jsx'], 'only the Goals (P7), Learning (P8) and Budgets (P9) pages use the hook')
   assert.deepEqual(importers['handoff.js'].sort(), [INPUT, 'lib/commandSession.js'].sort())
   assert.deepEqual(importers['commandContext.js'].sort(), [INPUT, 'lib/commandSession.js', 'lib/command/goalCommands.js'].sort(), 'goalCommands.js reads the one reference note')
-  for (const rel of [...importers['commandSession.js'], ...importers['useHandoff.js']]) assert.ok(!rel.startsWith('pages/') || ['pages/Goals.jsx', 'pages/LearningROI.jsx'].includes(rel), `${rel} is not a page that owns a command`)
+  for (const rel of [...importers['commandSession.js'], ...importers['useHandoff.js']]) assert.ok(!rel.startsWith('pages/') || ['pages/Goals.jsx', 'pages/LearningROI.jsx', 'pages/Budgets.jsx'].includes(rel), `${rel} is not a page that owns a command`)
 })
 
 test('N8: a clarification button that opens a page is checked before the questions, and anything else is still "no longer available"', () => {

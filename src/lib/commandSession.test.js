@@ -66,9 +66,9 @@ test('S3: an expired handoff, another user and a not-built intent are dropped an
   S.putHandoff(contribute('pa-5'), USER, NOW, ALL)
   assert.deepStrictEqual(S.takeHandoff('goals', USER, NOW, () => false), { ok: false, reason: 'unavailable' })
   assert.strictEqual(S.hasHandoff(), false)
-  // with the real availability the goal commands are built (P7) but budgets are not, so a budget cannot even be put in
+  // an intent that availability says is not built cannot even be put in (every owner command is built from P9, so availability is passed in)
   const budget = createPendingAction({ id: 'pb-1', intent: 'CREATE_BUDGET_MONTH', source: 'create next months budget', fields: { month: { value: { label: 'November 2026' }, kind: 'planned', origin: 'typed' } } }, NOW)
-  assert.throws(() => S.putHandoff(budget, USER, NOW), (e) => e.code === 'unavailable')
+  assert.throws(() => S.putHandoff(budget, USER, NOW, () => false), (e) => e.code === 'unavailable')
   assert.strictEqual(S.hasHandoff(), false)
   assert.strictEqual(S.putHandoff(contribute('pa-6'), USER, NOW).page, 'goals')
   assert.strictEqual(S.hasHandoff(), true)

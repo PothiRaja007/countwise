@@ -70,13 +70,14 @@ test('H3: only intents handed to an owner page can become a handoff (not entries
   assert.ok(INTENT_IDS.filter((id) => HANDOFF_FLOWS.includes(CONTRACTS[id].flow) && CONTRACTS[id].flow !== 'router').length >= 5)
 })
 
-test('H4: an intent that is not built yet cannot be handed off — the goal commands are built (P7), the other owners are not', () => {
+test('H4: an intent that is not built yet cannot be handed off — the goal (P7), learning (P8) and budget (P9) commands are built, salary and pension are not', () => {
   assert.strictEqual(isIntentAvailable('MODIFY_GOAL_CONTRIBUTE'), true)
   assert.strictEqual(H.createHandoff(contribute(), USER, NOW).page, 'goals')
   refusedWith('unavailable', () => H.createHandoff(contribute(), USER, NOW, () => false))
   const budget = createPendingAction({ id: 'pb-1', intent: 'CREATE_BUDGET_MONTH', source: 'create next months budget', fields: { month: { value: { label: 'November 2026' }, kind: 'planned', origin: 'typed' } } }, NOW)
-  assert.strictEqual(isIntentAvailable('CREATE_BUDGET_MONTH'), false)
-  refusedWith('unavailable', () => H.createHandoff(budget, USER, NOW))
+  assert.strictEqual(isIntentAvailable('CREATE_BUDGET_MONTH'), true) // built in P9
+  assert.strictEqual(H.createHandoff(budget, USER, NOW).page, 'budgets')
+  refusedWith('unavailable', () => H.createHandoff(budget, USER, NOW, () => false)) // and refused whenever availability says no
 })
 
 test('H5: a page reads a handoff once, and only the right page, user and time are accepted — each refusal has its own reason', () => {

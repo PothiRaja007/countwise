@@ -46,8 +46,8 @@ const choice = between(code, 'const handleGuardChoice = async (choiceId) => {', 
 
 test('W1: Money Inbox never writes; it prepares a handoff in exactly two places (goal and learning), both inside the choice handler', () => {
   assert.ok(!/\.(insert|update|upsert|delete|rpc)\(/.test(code), 'no write or rpc in MoneyInboxInput')
-  assert.equal((code.match(/putHandoff\(/g) || []).length, 2)
-  assert.equal((choice.match(/putHandoff\(/g) || []).length, 2)
+  assert.equal((code.match(/putHandoff\(/g) || []).length, 3, 'P9 adds the budget hand-off')
+  assert.equal((choice.match(/putHandoff\(/g) || []).length, 3)
   assert.equal((code.match(/\.from\('/g) || []).length, 14, 'P8 adds no read: the learning list only gained its status column')
   assert.ok(code.includes("supabase.from('learning_items').select('id, name, status').eq('user_id', user.id)"), 'a read-only list of this user\'s own items')
   assert.ok(!/\bremember\(|rememberGoal\(|takeHandoff\(|useHandoff|clearCommandSession\(/.test(code))
@@ -59,7 +59,7 @@ test('W2: Continue = putHandoff, then the route from the page table, then goTo â
   const n = branch.indexOf('navigationFromChoice(`open_${handoff.page}`)')
   const g = branch.indexOf('goTo(destination)')
   assert.ok(p > 0 && n > p && g > n)
-  assert.equal((code.match(/\bgoTo\(/g) || []).length, 4)
+  assert.equal((code.match(/\bgoTo\(/g) || []).length, 5, 'P9 adds the budget hand-off')
   assert.equal((code.match(/navigate\(/g) || []).length, 1)
   assert.ok(!/'\/learning'/.test(code), 'no route is written in Money Inbox: it comes from ALLOWED_PAGES')
   assert.ok(/catch \{\s*destination = null\s*\}/.test(branch) && /setNotice\(LEARNING_COMMAND_MESSAGES\.expired\)/.test(branch))

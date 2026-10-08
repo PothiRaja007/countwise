@@ -49,7 +49,7 @@ const choice = between(code, 'const handleGuardChoice = async (choiceId) => {', 
 
 test('T1: Money Inbox never writes anything; it prepares a handoff in exactly one place', () => {
   assert.ok(!/\.(insert|update|upsert|delete|rpc)\(/.test(code), 'no write or rpc in MoneyInboxInput')
-  assert.equal((code.match(/putHandoff\(/g) || []).length, 2, 'P8: one for a goal command, one for a learning command')
+  assert.equal((code.match(/putHandoff\(/g) || []).length, 3, 'P9: one for a goal command, one for a learning command, one for a budget command')
   assert.ok(choice.includes('putHandoff('), 'and both are inside the choice handler')
   assert.equal((code.match(/\.from\('/g) || []).length, 14, 'P7 adds no read to Money Inbox: the count is what P5 and P6 left')
   assert.deepEqual([...new Set([...code.matchAll(/\.from\('(\w+)'\)/g)].map((m) => m[1]))].sort(), ['accounts', 'budgets', 'categories', 'category_rules', 'goal_contributions', 'goals', 'learning_items', 'transactions'])
@@ -64,7 +64,7 @@ test('T2: Continue = putHandoff, then the route from the page table, then goTo â
   const n = branch.indexOf('navigationFromChoice(`open_${handoff.page}`)')
   const g = branch.indexOf('goTo(destination)')
   assert.ok(p > 0 && n > p && g > n, 'handoff, then the table lookup, then navigation')
-  assert.equal((code.match(/\bgoTo\(/g) || []).length, 4, 'goTo: typed page request, page choice, goal hand-off, learning hand-off (P8)')
+  assert.equal((code.match(/\bgoTo\(/g) || []).length, 5, 'goTo: typed page request, page choice, goal, learning and budget hand-offs (P9)')
   assert.equal((code.match(/navigate\(/g) || []).length, 1, 'the router is still called in exactly one place (goTo)')
   assert.ok(!/navigate\(`|navigate\('\/goals'\)|'\/goals'/.test(code), 'no route is written in Money Inbox: it comes from ALLOWED_PAGES')
   assert.ok(/catch \{\s*destination = null\s*\}/.test(branch) && /setNotice\(GOAL_COMMAND_MESSAGES\.expired\)/.test(branch), 'a handoff that cannot be prepared says so and leaves the text alone')
@@ -87,7 +87,7 @@ test('T3: the goal buttons are decided first; unknown ones do nothing; the detai
 
 test('T4: the extended panel is the one rendered, and it is built from the base view', () => {
   assert.equal((code.match(/<CommandGuardPanel/g) || []).length, 1)
-  assert.ok(/<CommandGuardPanel view=\{learningCommandView\(goalCommandView\(buildGuardView\(guard\), guard, guardLists\?\.activeGoals, Date\.now\(\)\), guard, guardLists\?\.learningItems, Date\.now\(\)\)\}/.test(code), 'P8: the learning view wraps the goal view, which wraps the base view')
+  assert.ok(/<CommandGuardPanel view=\{budgetCommandView\(learningCommandView\(goalCommandView\(buildGuardView\(guard\), guard, guardLists\?\.activeGoals, Date\.now\(\)\), guard, guardLists\?\.learningItems, Date\.now\(\)\), guard, guardLists\?\.expenseCategories, Date\.now\(\)\)\}/.test(code), 'P9: the budget view wraps the learning view, which wraps the goal view, which wraps the base view')
   assert.equal((code.match(/buildGuardView\(/g) || []).length, 1)
   const guardView = read('lib/command/guardView.js')
   assert.ok(!/goalCommands|goal_commands|continue_goals/.test(guardView), 'guardView.js knows nothing of goal commands (it stays as P4 and P5 left it)')
@@ -200,7 +200,7 @@ test('T10: nobody but the known files imports the new modules', () => {
   walk(SRC)
   assert.deepEqual(importers['goalCommands.js'], [INPUT])
   assert.deepEqual(importers['goalDialog.js'], [GOALS])
-  assert.deepEqual(importers['useHandoff.js'].sort(), [GOALS, 'pages/LearningROI.jsx'].sort(), 'P8: Goals and Learning')
+  assert.deepEqual(importers['useHandoff.js'].sort(), [GOALS, 'pages/Budgets.jsx', 'pages/LearningROI.jsx'].sort(), 'P9: Goals, Budgets and Learning')
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

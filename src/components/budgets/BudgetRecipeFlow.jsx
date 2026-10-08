@@ -42,7 +42,7 @@ function nextRowId() {
   return `row-${rowIdCounter}`
 }
 
-export default function BudgetRecipeFlow({ userId, incomeType, categories, categoryRules, transactions, budgetedCategoryIdsThisMonth, targetMonth, onSaved }) {
+export default function BudgetRecipeFlow({ userId, incomeType, categories, categoryRules, transactions, budgetedCategoryIdsThisMonth, targetMonth, onSaved, notice, onBusyChange }) {
   const [step, setStep] = useState('input') // input | cooking | curated | missing
   const [inputText, setInputText] = useState('')
   const [cookingIndex, setCookingIndex] = useState(0)
@@ -72,6 +72,17 @@ export default function BudgetRecipeFlow({ userId, incomeType, categories, categ
   const [buildError, setBuildError] = useState(null)
 
   const cookingTimer = useRef(null)
+
+  // P9: tells the page whether the user is in the middle of this recipe (anything past the empty
+  // input box), so a Money Inbox handoff never replaces work in progress. It reports on mount too,
+  // so a recipe that is rebuilt after a save (the page reloads) reports "finished". Interaction
+  // only: it changes nothing about parsing, suggestions or saving.
+  const busyRef = useRef(onBusyChange)
+  busyRef.current = onBusyChange
+  const busy = step !== 'input' || inputText.trim() !== ''
+  useEffect(() => {
+    if (busyRef.current) busyRef.current(busy)
+  }, [busy])
 
   const { period_start: targetPeriodStart, period_end: targetPeriodEnd } = useMemo(() => monthRangeFor(targetMonth), [targetMonth])
   const monthLabel = useMemo(() => new Date(targetPeriodStart).toLocaleDateString('en-IN', { month: 'long' }), [targetPeriodStart])
@@ -280,6 +291,11 @@ export default function BudgetRecipeFlow({ userId, incomeType, categories, categ
       {step === 'input' && (
         <div className="space-y-3">
           <h2 className="font-display text-lg font-semibold tracking-tight">Pool your monthly expenses</h2>
+          {Array.isArray(notice) && notice.length > 0 && (
+            <div className="rounded-lg border border-line dark:border-lineDark bg-paper dark:bg-charcoal px-3 py-2 text-xs text-muted dark:text-mutedDark space-y-1" data-testid="command-notice">
+              {notice.map((line) => <p key={line}>{line}</p>)}
+            </div>
+          )}
           {buildError && <p className="text-sm text-bad">{buildError}</p>}
           <Input
             as="textarea"

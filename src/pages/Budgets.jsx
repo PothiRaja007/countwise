@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { X, Plus, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../lib/AuthContext.jsx'
@@ -15,6 +15,8 @@ import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import { useHandoff } from '../lib/useHandoff.js'
+import { budgetDialogFromHandoff, BUDGET_DIALOG_MESSAGES } from '../lib/command/budgetDialog.js'
 
 
 function monthRange(monthValue) {
@@ -50,6 +52,18 @@ export default function Budgets() {
   const [creating, setCreating] = useState(false)
   const [editingBudget, setEditingBudget] = useState(null)
   const [deletingBudget, setDeletingBudget] = useState(null)
+
+  // P9 — a command from Money Inbox. Nothing here saves: the recipe or form below confirms and
+  // saves with its own code. `recipeMonth` is the month the Budget Recipe builds for (this month
+  // unless a command asked for next month); `recipeBusy` is true while the user is mid-recipe.
+  const { handoff, done } = useHandoff('budgets')
+  const handledHandoff = useRef(null)
+  const [commandDialog, setCommandDialog] = useState(null) // { kind: 'edit' | 'create', budgetId?, prefill, notice }
+  const [commandMessage, setCommandMessage] = useState(null)
+  const [recipeMonth, setRecipeMonth] = useState(currentMonthValue())
+  const [recipeNotice, setRecipeNotice] = useState(null)
+  const [recipeBusy, setRecipeBusy] = useState(false)
+  const recipeBusyRef = useRef(false)
 
   const load = async () => {
     if (!user) return
@@ -119,6 +133,77 @@ export default function Budgets() {
     [budgets, currentMonthStart]
   )
 
+  // The recipe's month and exclusions follow `recipeMonth`; with no command that is today's month,
+  // so these are exactly the values the page always passed.
+  const { period_start: recipeMonthStart } = useMemo(() => monthRange(recipeMonth), [recipeMonth])
+  const recipeBudgetedCategoryIds = useMemo(
+    () => (recipeMonth === currentMonthValueForInbox
+      ? currentMonthBudgetedCategoryIds
+      : budgets.filter((b) => b.period_start === recipeMonthStart).map((b) => b.category_id)),
+    [recipeMonth, currentMonthValueForInbox, currentMonthBudgetedCategoryIds, budgets, recipeMonthStart]
+  )
+
+  // The recipe reports when the user is in the middle of it. When it goes from busy to finished
+  // (saved, skipped, or left), the recipe goes back to this month.
+  const handleRecipeBusy = (busy) => {
+    const wasBusy = recipeBusyRef.current
+    recipeBusyRef.current = busy
+    setRecipeBusy(busy)
+    if (wasBusy && !busy) {
+      setRecipeMonth(currentMonthValueForInbox)
+      setRecipeNotice(null)
+    }
+  }
+
+  const formOpen = creating || !!editingBudget
+
+  // Receive a handoff. It waits until the budgets are loaded, is handled once per handoff id (React
+  // Strict Mode runs effects twice), and NEVER replaces a form that is open or a recipe in progress:
+  // whatever the user has typed stays, and they are told to finish it first.
+  useEffect(() => {
+    if (!handoff || loading) return
+    if (handledHandoff.current === handoff.id) return
+    handledHandoff.current = handoff.id
+    done()
+    if (error) return
+    if (formOpen || deletingBudget) {
+      setCommandMessage(BUDGET_DIALOG_MESSAGES.formOpen)
+      return
+    }
+    if (recipeBusyRef.current) {
+      setCommandMessage(BUDGET_DIALOG_MESSAGES.recipeBusy)
+      return
+    }
+    const outcome = budgetDialogFromHandoff(handoff, { budgets, categories, currentMonth: currentMonthValueForInbox })
+    if (!outcome.ok) {
+      if (outcome.message) setCommandMessage(outcome.message)
+      return
+    }
+    setCommandMessage(null)
+    setError(null)
+    if (outcome.dialog === 'recipe') {
+      setRecipeMonth(outcome.month)
+      setRecipeNotice(outcome.notice)
+      setViewMonth(outcome.month)
+    } else if (outcome.dialog === 'edit_budget') {
+      const row = budgets.find((b) => String(b.id) === String(outcome.budgetId))
+      if (!row) return
+      setCommandDialog({ kind: 'edit', budgetId: outcome.budgetId, prefill: outcome.prefill, notice: outcome.notice })
+      setViewMonth(row.period_start.slice(0, 7))
+      setEditingBudget(row)
+    } else {
+      setCommandDialog({ kind: 'create', prefill: outcome.prefill, notice: outcome.notice })
+      setViewMonth(outcome.prefill.month)
+      setCreating(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handoff, loading])
+
+  // The command flag lasts only while its form is open.
+  useEffect(() => {
+    if (commandDialog && !formOpen) setCommandDialog(null)
+  }, [commandDialog, formOpen])
+
   const handleDelete = async () => {
     if (!deletingBudget) return
     const { error: deleteErr } = await supabase.from('budgets').delete().eq('id', deletingBudget.id)
@@ -153,13 +238,35 @@ export default function Budgets() {
         categories={categories}
         categoryRules={categoryRules}
         transactions={transactions}
-        budgetedCategoryIdsThisMonth={currentMonthBudgetedCategoryIds}
-        targetMonth={currentMonthValueForInbox}
+        budgetedCategoryIdsThisMonth={recipeBudgetedCategoryIds}
+        targetMonth={recipeMonth}
         onSaved={async () => {
           await load()
-          setViewMonth(currentMonthValueForInbox)
+          setViewMonth(recipeMonth)
         }}
+        notice={recipeNotice}
+        onBusyChange={handleRecipeBusy}
       />
+
+      {commandMessage && (
+        <div className="flex items-center justify-between gap-3 text-sm text-bad">
+          <span>{commandMessage}</span>
+          <button onClick={() => setCommandMessage(null)} aria-label="Dismiss message" className="shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {recipeMonth !== currentMonthValueForInbox && !recipeBusy && (
+        <div className="text-xs text-muted dark:text-mutedDark">
+          <button
+            onClick={() => { setRecipeMonth(currentMonthValueForInbox); setRecipeNotice(null) }}
+            className="underline"
+          >
+            Use this month instead
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
@@ -208,6 +315,9 @@ export default function Budgets() {
           title="New budget"
           submitLabel="Create budget"
           categories={availableCategories}
+          initialCategoryId={commandDialog?.kind === 'create' ? commandDialog.prefill.categoryId : undefined}
+          initialAmount={commandDialog?.kind === 'create' ? commandDialog.prefill.amount : undefined}
+          notice={commandDialog?.kind === 'create' ? commandDialog.notice : undefined}
           initialMonth={viewMonth}
           onClose={() => setCreating(false)}
           onSubmit={async ({ categoryId, amount, month }) => {
@@ -240,7 +350,8 @@ export default function Budgets() {
           categories={categories}
           lockCategory
           initialCategoryId={editingBudget.category_id}
-          initialAmount={editingBudget.amount}
+          initialAmount={commandDialog?.kind === 'edit' && commandDialog.budgetId === editingBudget.id ? commandDialog.prefill.amount : editingBudget.amount}
+          notice={commandDialog?.kind === 'edit' && commandDialog.budgetId === editingBudget.id ? commandDialog.notice : undefined}
           initialMonth={editingBudget.period_start.slice(0, 7)}
           onClose={() => setEditingBudget(null)}
           onSubmit={async ({ amount, month }) => {
@@ -327,6 +438,7 @@ function BudgetFormModal({
   initialCategoryId = '',
   initialAmount = '',
   initialMonth,
+  notice = null,
   onClose,
   onSubmit,
 }) {
@@ -359,6 +471,12 @@ function BudgetFormModal({
             <X size={18} />
           </button>
         </div>
+
+        {Array.isArray(notice) && notice.length > 0 && (
+          <div className="rounded-lg border border-line dark:border-lineDark bg-paper dark:bg-charcoal px-3 py-2 text-xs text-muted dark:text-mutedDark space-y-1" data-testid="command-notice">
+            {notice.map((line) => <p key={line}>{line}</p>)}
+          </div>
+        )}
 
         <div className="space-y-3">
           <div>
