@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { X, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../lib/AuthContext.jsx'
@@ -13,6 +13,9 @@ import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import { useHandoff } from '../lib/useHandoff.js'
+import { remember } from '../lib/commandSession.js'
+import { goalDialogFromHandoff, pickCreatedGoal, GOAL_DIALOG_MESSAGES } from '../lib/command/goalDialog.js'
 
 const MAX_ACTIVE_GOALS = 10
 
@@ -43,6 +46,14 @@ export default function Goals() {
   const [editingGoal, setEditingGoal] = useState(null)
   const [actionGoal, setActionGoal] = useState(null) // { goal, mode: 'contribution' | 'withdrawal' }
   const [archivingGoal, setArchivingGoal] = useState(null)
+
+  // P7 — a goal command from Money Inbox. `commandDialog` says that the dialog that is open now
+  // was opened for a command (and with what), so the banner and the pre-filled values show and
+  // so that only a CONFIRMED save from such a dialog is remembered. Opening a dialog yourself
+  // leaves it null, and the dialogs behave exactly as they always did.
+  const { handoff, done } = useHandoff('goals')
+  const handledHandoff = useRef(null)
+  const [commandDialog, setCommandDialog] = useState(null) // { kind: 'create' | 'contribute', goalId?, prefill, notice }
 
   const load = async () => {
     if (!user) return
@@ -97,6 +108,74 @@ export default function Goals() {
 
   const activeGoalCount = activeGoals.length
   const atMaxActiveGoals = activeGoalCount >= MAX_ACTIVE_GOALS
+
+  // P7 — receive a handoff. It waits until the goals are loaded (the dialogs need them), is
+  // handled once per handoff id (React Strict Mode runs effects twice), and NEVER replaces a
+  // form that is already open: whatever the user has typed there stays, and they are told to
+  // finish it first. Nothing is saved here; the dialogs confirm and save with their own rules.
+  useEffect(() => {
+    if (!handoff || loading) return
+    if (handledHandoff.current === handoff.id) return
+    handledHandoff.current = handoff.id
+    done()
+    if (error) return
+    if (creating || editingGoal || actionGoal || archivingGoal) {
+      setActionError(GOAL_DIALOG_MESSAGES.dialogOpen)
+      return
+    }
+    const outcome = goalDialogFromHandoff(handoff, { goals, accounts, activeCount: activeGoalCount, activeLimit: MAX_ACTIVE_GOALS })
+    if (!outcome.ok) {
+      if (outcome.message) setActionError(outcome.message)
+      return
+    }
+    setActionError(null)
+    if (outcome.dialog === 'create_goal') {
+      setCommandDialog({ kind: 'create', prefill: outcome.prefill, notice: outcome.notice })
+      setCreating(true)
+    } else {
+      const goal = goals.find((g) => String(g.id) === String(outcome.goalId))
+      setCommandDialog({ kind: 'contribute', goalId: outcome.goalId, prefill: outcome.prefill, notice: outcome.notice })
+      setActionGoal({ goal, mode: 'contribution' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handoff, loading])
+
+  // The command flag lasts only while its dialog is open.
+  useEffect(() => {
+    if (commandDialog && !creating && !actionGoal) setCommandDialog(null)
+  }, [commandDialog, creating, actionGoal])
+
+  // P7 — memory for "add 2000 to it", written ONLY after a confirmed save of a dialog that came
+  // from a command. These wrap the existing save handlers and add to them; they change nothing in them.
+  // A created goal is remembered only if the read-back finds exactly ONE new goal that matches what
+  // was saved; if it cannot be told for sure, nothing is remembered (a wrong memory is worse than none).
+  const rememberCreated = (submit) => async (values) => {
+    const fromCommand = commandDialog?.kind === 'create'
+    const beforeIds = goals.map((g) => g.id)
+    const failure = await submit(values)
+    if (!failure && fromCommand) {
+      try {
+        const { data, error: readErr } = await supabase.from('goals').select('id, name, target_amount, status').eq('user_id', user.id).eq('name', values.name)
+        const created = readErr ? null : pickCreatedGoal(data, beforeIds, values)
+        if (created) remember(created, user.id, Date.now())
+      } catch {
+        // nothing is remembered
+      }
+    }
+    return failure
+  }
+  const rememberContributed = (goal, saved) => async () => {
+    if (commandDialog?.kind === 'contribute' && String(commandDialog.goalId) === String(goal.id)) {
+      try {
+        remember({ id: goal.id, name: goal.name }, user.id, Date.now())
+      } catch {
+        // nothing is remembered
+      }
+    }
+    await saved()
+  }
+  const createPrefill = creating && commandDialog?.kind === 'create' ? commandDialog : null
+  const contributePrefill = actionGoal && commandDialog?.kind === 'contribute' && String(commandDialog.goalId) === String(actionGoal.goal.id) ? commandDialog : null
 
   const handleArchive = async () => {
     if (!archivingGoal) return
@@ -218,8 +297,12 @@ export default function Goals() {
         <GoalFormModal
           title="New goal"
           submitLabel="Create goal"
+          initialName={createPrefill ? createPrefill.prefill.name : undefined}
+          initialTargetAmount={createPrefill ? createPrefill.prefill.targetAmount : undefined}
+          initialTargetDate={createPrefill ? createPrefill.prefill.targetDate : undefined}
+          notice={createPrefill ? createPrefill.notice : undefined}
           onClose={() => setCreating(false)}
-          onSubmit={async ({ name, targetAmount, targetDate }) => {
+          onSubmit={rememberCreated(async ({ name, targetAmount, targetDate }) => {
             if (atMaxActiveGoals) {
               return `You can only have ${MAX_ACTIVE_GOALS} active goals at once.`
             }
@@ -238,7 +321,7 @@ export default function Goals() {
             setCreating(false)
             await load()
             return null
-          }}
+          })}
         />
       )}
 
@@ -276,11 +359,14 @@ export default function Goals() {
           transactions={transactions}
           goalContributions={goalContributions}
           userId={user.id}
+          initialAmount={contributePrefill ? contributePrefill.prefill.amount : undefined}
+          initialAccountId={contributePrefill ? contributePrefill.prefill.accountId : undefined}
+          notice={contributePrefill ? contributePrefill.notice : undefined}
           onClose={() => setActionGoal(null)}
-          onSaved={async () => {
+          onSaved={rememberContributed(actionGoal.goal, async () => {
             setActionGoal(null)
             await load()
-          }}
+          })}
           onError={setError}
         />
       )}
@@ -292,7 +378,7 @@ export default function Goals() {
   )
 }
 
-function GoalFormModal({ title, submitLabel, initialName = '', initialTargetAmount = '', initialTargetDate = '', onClose, onSubmit }) {
+function GoalFormModal({ title, submitLabel, initialName = '', initialTargetAmount = '', initialTargetDate = '', notice, onClose, onSubmit }) {
   const [name, setName] = useState(initialName)
   const [targetAmount, setTargetAmount] = useState(initialTargetAmount)
   const [targetDate, setTargetDate] = useState(initialTargetDate)
@@ -322,6 +408,12 @@ function GoalFormModal({ title, submitLabel, initialName = '', initialTargetAmou
             <X size={18} />
           </button>
         </div>
+
+        {notice && notice.length > 0 && (
+          <div className="text-xs text-muted dark:text-mutedDark space-y-1" data-testid="money-inbox-notice">
+            {notice.map((line, i) => <p key={i}>{line}</p>)}
+          </div>
+        )}
 
         <div className="space-y-3">
           <Input

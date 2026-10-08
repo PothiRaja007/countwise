@@ -18,9 +18,15 @@ function toISODate(date) {
 // Shared modal for both directions — mode is 'contribution' or 'withdrawal'.
 // Contribution is capped by the selected account's available (unallocated)
 // balance; withdrawal is capped by the goal's current progress.
-export default function ContributeModal({ mode, goal, currentProgress, accounts, transactions, goalContributions, userId, onClose, onSaved, onError }) {
-  const [accountId, setAccountId] = useState(accounts[0]?.id || '')
-  const [amount, setAmount] = useState('')
+//
+// P7: a goal command from Money Inbox may open this with three OPTIONAL props. Without them
+// (the Goals page's own buttons) nothing changes: the first account is pre-selected and the
+// amount is empty. `initialAccountId` is the user's own typed account, or '' to leave it blank
+// (a command never picks the account whose money moves); `notice` is the "From Money Inbox"
+// banner (a list of lines). Saving is untouched.
+export default function ContributeModal({ mode, goal, currentProgress, accounts, transactions, goalContributions, userId, onClose, onSaved, onError, initialAmount, initialAccountId, notice }) {
+  const [accountId, setAccountId] = useState(initialAccountId !== undefined ? initialAccountId : (accounts[0]?.id || ''))
+  const [amount, setAmount] = useState(initialAmount !== undefined ? String(initialAmount) : '')
   const [saving, setSaving] = useState(false)
   const [localError, setLocalError] = useState(null)
 
@@ -88,6 +94,12 @@ export default function ContributeModal({ mode, goal, currentProgress, accounts,
             <X size={18} />
           </button>
         </div>
+
+        {notice && notice.length > 0 && (
+          <div className="text-xs text-muted dark:text-mutedDark space-y-1" data-testid="money-inbox-notice">
+            {notice.map((line, i) => <p key={i}>{line}</p>)}
+          </div>
+        )}
 
         <div className="space-y-3">
           <Select

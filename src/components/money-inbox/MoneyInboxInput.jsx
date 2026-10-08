@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { useAuth } from '../../lib/AuthContext.jsx'
@@ -15,6 +16,11 @@ import { buildGuardView, resolveGuardChoice } from '../../lib/command/guardView.
 import QueryResultDialog from './QueryResultDialog.jsx'
 import { requestFromResult, queryFromChoice, answerQuery, dataProblemAnswer, mayBeTruncated, QUERY_MESSAGES } from '../../lib/command/queries.js'
 import { formatCurrency } from '../../lib/format.js'
+import { navigationFromResult, navigationFromChoice } from '../../lib/command/handoff.js'
+import { applyReferenceMemory } from '../../lib/command/commandContext.js'
+import { memoryFor, putHandoff } from '../../lib/commandSession.js'
+import { goalCommandView, resolveGoalCommandChoice, choiceNotice, GOAL_COMMAND_MESSAGES } from '../../lib/command/goalCommands.js'
+import { learningCommandView, resolveLearningCommandChoice, learningChoiceNotice, LEARNING_COMMAND_MESSAGES } from '../../lib/command/learningCommands.js'
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
 
@@ -82,6 +88,7 @@ async function readQueryData(request, userId) {
 
 export default function MoneyInboxInput({ onClose, embedded = false, onSaved, initialDate, initialText = '' }) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const titleId = useId()
   const [text, setText] = useState(initialText)
   const [loading, setLoading] = useState(false)
@@ -113,6 +120,20 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
     }
   }
 
+  // Opens one of the six approved pages (P6). The route comes from the page table in
+  // lib/command/handoff.js, never from the typed text. Nothing is saved, so this does
+  // not call onSaved; Money Inbox is simply reset (and the floating panel closed).
+  const goTo = (destination) => {
+    navigate(destination.route)
+    setReviewState(null)
+    setGuard(null)
+    setGuardLists(null)
+    setAnswer(null)
+    setNotice(null)
+    setText('')
+    onClose?.()
+  }
+
   // `options.skipGuard` is only used when the user explicitly chose "record it as an
   // expense"; the button passes a click event here, which has no such property.
   const handleParse = async (options) => {
@@ -135,7 +156,7 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         // Read-only, for the command guard only. A failure here is ignored: the
         // normal entry flow never needs these lists.
         supabase.from('goals').select('id, name, status').eq('user_id', user.id),
-        supabase.from('learning_items').select('id, name').eq('user_id', user.id),
+        supabase.from('learning_items').select('id, name, status').eq('user_id', user.id),
       ])
 
       if (accountsRes.error) throw accountsRes.error
@@ -169,11 +190,23 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
             },
             Date.now(),
           )
-          lists = { goals, categories: nameList(categories), accounts: nameList(accounts) }
+          // A "which goal?" that a fresh remembered goal can answer (P6). Changes nothing else.
+          // Only ACTIVE goals can take a contribution (P7), so only they can be "it".
+          const activeGoals = nameList((goalsRes.error ? [] : goalsRes.data || []).filter((g) => g.status === 'active'))
+          interpreted = applyReferenceMemory(interpreted, memoryFor(user.id), activeGoals, user.id, Date.now())
+          // P8 — the user's learning items WITH their status, for the buttons of a learning command.
+          const learningWithStatus = (learningRes.error ? [] : learningRes.data || []).filter((r) => r && r.id != null && typeof r.name === 'string' && r.name.trim()).map((r) => ({ id: String(r.id), name: r.name, status: r.status }))
+          lists = { goals, activeGoals, learningItems: learningWithStatus, categories: nameList(categories), accounts: nameList(accounts) }
         } catch {
           interpreted = null
         }
         if (interpreted && interpreted.kind !== 'transaction') {
+          // A complete request to open a page (P6) goes straight there.
+          const destination = navigationFromResult(interpreted)
+          if (destination) {
+            goTo(destination)
+            return
+          }
           // A complete question that is built (P5) is answered here; anything else
           // stays in the guard panel.
           let request = null
@@ -238,6 +271,73 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
 
   // What a button on the guard panel does (decided in lib/command/guardView.js).
   const handleGuardChoice = async (choiceId) => {
+    // The buttons of a goal command (P7) are decided in lib/command/goalCommands.js. Continue only
+    // PREPARES the handoff and opens the Goals page; the Goals page confirms and saves. Nothing is
+    // written here. Edit, Cancel and every other kind of result are not its business ('pass').
+    const goalOutcome = resolveGoalCommandChoice(guard, choiceId, guardLists?.activeGoals, Date.now())
+    if (goalOutcome.action === 'hand_off') {
+      let destination = null
+      try {
+        const handoff = putHandoff(goalOutcome.pending, user.id, Date.now())
+        destination = navigationFromChoice(`open_${handoff.page}`)
+      } catch {
+        destination = null
+      }
+      if (destination) {
+        goTo(destination)
+        return
+      }
+      setGuard(null)
+      setNotice(GOAL_COMMAND_MESSAGES.expired)
+      return
+    }
+    if (goalOutcome.action === 'pick_goal') {
+      setNotice(null)
+      setGuard(goalOutcome.result)
+      return
+    }
+    if (goalOutcome.action === 'expired' || goalOutcome.action === 'unavailable') {
+      setGuard(null)
+      setNotice(goalOutcome.message)
+      return
+    }
+    if (goalOutcome.action === 'unknown') {
+      setGuard(null)
+      return
+    }
+    // The buttons of a learning command (P8) are decided in lib/command/learningCommands.js, the same way:
+    // Continue only PREPARES the handoff and opens the Learning page, which confirms and saves.
+    const learningOutcome = resolveLearningCommandChoice(guard, choiceId, guardLists?.learningItems, Date.now())
+    if (learningOutcome.action === 'hand_off') {
+      let destination = null
+      try {
+        const handoff = putHandoff(learningOutcome.pending, user.id, Date.now())
+        destination = navigationFromChoice(`open_${handoff.page}`)
+      } catch {
+        destination = null
+      }
+      if (destination) {
+        goTo(destination)
+        return
+      }
+      setGuard(null)
+      setNotice(LEARNING_COMMAND_MESSAGES.expired)
+      return
+    }
+    if (learningOutcome.action === 'pick_item') {
+      setNotice(null)
+      setGuard(learningOutcome.result)
+      return
+    }
+    if (learningOutcome.action === 'expired' || learningOutcome.action === 'unavailable') {
+      setGuard(null)
+      setNotice(learningOutcome.message)
+      return
+    }
+    if (learningOutcome.action === 'unknown') {
+      setGuard(null)
+      return
+    }
     let outcome
     try {
       outcome = resolveGuardChoice(guard, choiceId, Date.now())
@@ -257,6 +357,23 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
     } else if (outcome.action === 'start') {
       // One of the built questions (P5). Anything that can no longer be found says so.
       setNotice(null)
+      // "Create a goal" / "Add money to X" buttons carry no details, so there is nothing to hand over (P7).
+      const goalNotice = outcome.intent === 'CREATE_GOAL' || outcome.intent === 'MODIFY_GOAL_CONTRIBUTE' ? choiceNotice(outcome.choiceId, guardLists?.goals) : null
+      if (goalNotice) {
+        setNotice(goalNotice)
+        return
+      }
+      // "Add a learning item" / "Change the status of X" buttons carry no details either (P8).
+      const learningNotice = outcome.intent === 'CREATE_LEARNING_ITEM' || outcome.intent === 'MODIFY_LEARNING_STATUS' ? learningChoiceNotice(outcome.choiceId, guardLists?.learningItems) : null
+      if (learningNotice) {
+        setNotice(learningNotice)
+        return
+      }
+      const destination = outcome.intent === 'NAVIGATE' ? navigationFromChoice(outcome.choiceId) : null
+      if (destination) {
+        goTo(destination)
+        return
+      }
       const request = queryFromChoice(outcome.choiceId, guardLists, initialDate ? new Date(initialDate) : new Date())
       if (!request) {
         setNotice(QUERY_MESSAGES.choiceGone)
@@ -315,7 +432,7 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       {answer ? (
         <QueryResultDialog answer={answer} onAskAgain={handleAskAgain} onClose={handleAnswerClose} />
       ) : guard ? (
-        <CommandGuardPanel view={buildGuardView(guard)} onChoose={handleGuardChoice} />
+        <CommandGuardPanel view={learningCommandView(goalCommandView(buildGuardView(guard), guard, guardLists?.activeGoals, Date.now()), guard, guardLists?.learningItems, Date.now())} onChoose={handleGuardChoice} />
       ) : (
         <>
       <p className="text-sm text-muted dark:text-mutedDark">

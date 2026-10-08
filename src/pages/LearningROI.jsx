@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, CalendarDays, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../lib/AuthContext.jsx'
@@ -11,8 +11,8 @@ import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
-import CareerAreas from '../components/learning/CareerAreas.jsx'
-import { careerAreasFor, CAREER_AREAS_NOTE } from '../lib/learningCareerAreas.js'
+import { useHandoff } from '../lib/useHandoff.js'
+import { learningDialogFromHandoff, LEARNING_DIALOG_MESSAGES } from '../lib/command/learningDialog.js'
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -79,6 +79,14 @@ export default function Learning() {
   const [editingItem, setEditingItem] = useState(null)
   const [deletingItem, setDeletingItem] = useState(null)
 
+  // P8 — a learning command from Money Inbox. `commandDialog` says that the form that is open now was
+  // opened for a command (and with what), so the banner and the pre-filled values show. Opening the
+  // form yourself leaves it null, and the form behaves exactly as it always did.
+  const { handoff, done } = useHandoff('learning')
+  const handledHandoff = useRef(null)
+  const [commandDialog, setCommandDialog] = useState(null) // { kind: 'create' | 'status', itemId?, prefill, notice }
+  const [commandMessage, setCommandMessage] = useState(null)
+
   const load = async () => {
     if (!user) return
     setLoading(true)
@@ -107,6 +115,44 @@ export default function Learning() {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
+
+  // P8 — receive a handoff. It waits until the items are loaded, is handled once per handoff id (React
+  // Strict Mode runs effects twice), and NEVER replaces a form that is already open: whatever the user
+  // has typed there stays, and they are told to finish it first. Nothing is saved here; the form
+  // confirms and saves with its own rules (handleSave).
+  useEffect(() => {
+    if (!handoff || loading) return
+    if (handledHandoff.current === handoff.id) return
+    handledHandoff.current = handoff.id
+    done()
+    if (error) return
+    if (formOpen || deletingItem) {
+      setCommandMessage(LEARNING_DIALOG_MESSAGES.dialogOpen)
+      return
+    }
+    const outcome = learningDialogFromHandoff(handoff, { items })
+    if (!outcome.ok) {
+      if (outcome.message) setCommandMessage(outcome.message)
+      return
+    }
+    setCommandMessage(null)
+    setError(null)
+    if (outcome.dialog === 'create_item') {
+      setCommandDialog({ kind: 'create', prefill: outcome.prefill, notice: outcome.notice })
+      setEditingItem(null)
+    } else {
+      const item = items.find((i) => String(i.id) === String(outcome.itemId))
+      setCommandDialog({ kind: 'status', itemId: outcome.itemId, prefill: outcome.prefill, notice: outcome.notice })
+      setEditingItem(item)
+    }
+    setFormOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handoff, loading])
+
+  // The command flag lasts only while its form is open.
+  useEffect(() => {
+    if (commandDialog && !formOpen) setCommandDialog(null)
+  }, [commandDialog, formOpen])
 
   const visibleItems = useMemo(() => {
     if (activeTab === 'all') return items
@@ -249,6 +295,15 @@ export default function Learning() {
           </div>
         )}
 
+        {commandMessage && (
+          <div className="mt-5 flex items-center justify-between gap-3 text-sm text-bad">
+            <span>{commandMessage}</span>
+            <button onClick={() => setCommandMessage(null)} aria-label="Dismiss message" className="shrink-0">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 border-y border-line dark:border-lineDark">
           <SummaryCell label="Learning cost" value={formatCurrency(summary.totalCost)} />
           <SummaryCell label="Active" value={summary.activeItems} />
@@ -293,15 +348,13 @@ export default function Learning() {
             ))}
           </div>
         )}
-
-        {visibleItems.some((item) => careerAreasFor(item)) && (
-          <p className="mt-4 text-xs text-muted dark:text-mutedDark">{CAREER_AREAS_NOTE}</p>
-        )}
       </div>
 
       {formOpen && (
         <LearningFormModal
           item={editingItem}
+          initialValues={commandDialog?.prefill}
+          notice={commandDialog?.notice}
           onClose={() => {
             setFormOpen(false)
             setEditingItem(null)
@@ -358,8 +411,6 @@ function LearningRow({ item, onEdit, onDelete }) {
             </span>
           )}
         </div>
-
-        <CareerAreas item={item} />
       </div>
 
       <div className="w-full">
@@ -394,7 +445,7 @@ function LearningRow({ item, onEdit, onDelete }) {
   )
 }
 
-function LearningFormModal({ item, onClose, onSave }) {
+function LearningFormModal({ item, onClose, onSave, initialValues = null, notice = null }) {
   const [form, setForm] = useState(() =>
     item
       ? {
@@ -404,8 +455,9 @@ function LearningFormModal({ item, onClose, onSave }) {
           targetDate: item.target_date || '',
           progressPct: item.progress_pct ?? 0,
           status: item.status || 'planned',
+          ...(initialValues || {}),
         }
-      : DEFAULT_FORM,
+      : { ...DEFAULT_FORM, ...(initialValues || {}) },
   )
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState(null)
@@ -454,6 +506,12 @@ function LearningFormModal({ item, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {Array.isArray(notice) && notice.length > 0 && (
+            <div className="rounded-lg border border-line dark:border-lineDark bg-paper dark:bg-charcoal px-3 py-2 text-xs text-muted dark:text-mutedDark space-y-1" data-testid="command-notice">
+              {notice.map((line) => <p key={line}>{line}</p>)}
+            </div>
+          )}
+
           {formError && <p className="text-sm text-bad">{formError}</p>}
 
           <Field label="Name" required>

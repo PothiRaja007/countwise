@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { consumeOAuthLogin } from './oauthLoginFlag'
+import { clearCommandSession } from './commandSession.js'
 
 const AuthContext = createContext(null)
 
@@ -96,6 +97,7 @@ export function AuthProvider({ children }) {
   }
 
   const signOut = async () => {
+    clearCommandSession()
     await supabase.auth.signOut()
   }
 

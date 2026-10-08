@@ -76,7 +76,7 @@ test('U4: interpret() failure falls back to the transaction path', () => {
 })
 
 test('U5: the panel is shown in both modes and cannot write', () => {
-  assert.ok(/guard \? \(\s*<CommandGuardPanel view=\{buildGuardView\(guard\)\} onChoose=\{handleGuardChoice\} \/>/.test(code), 'panel rendered when guard is set')
+  assert.ok(/guard \? \(\s*<CommandGuardPanel view=\{learningCommandView\(goalCommandView\(buildGuardView\(guard\), guard, guardLists\?\.activeGoals, Date\.now\(\)\), guard, guardLists\?\.learningItems, Date\.now\(\)\)\} onChoose=\{handleGuardChoice\} \/>/.test(code), 'panel rendered when guard is set (P8: through the goal and learning command views)')
   // `panel` is the shared content used by both the embedded and modal returns
   assert.ok(code.indexOf('const panel =') < code.indexOf('<CommandGuardPanel'), 'inside the shared panel')
   assert.ok(code.includes('if (embedded)') && /return \(\s*<Modal/.test(code), 'both modes use the shared panel')
