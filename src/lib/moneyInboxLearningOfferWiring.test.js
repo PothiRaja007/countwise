@@ -84,7 +84,7 @@ test('Y4: the offer branch keeps the panel open and refreshes the parent; every 
   assert.ok(/onSaved\?\.\(\)/.test(branch) && /return/.test(branch))
   assert.ok(/setReviewState\(null\)/.test(branch) && /setText\(''\)/.test(branch), 'the review is finished and reset')
   const rest = close.slice(close.indexOf('\n    }\n') + 7)
-  assert.ok(/setOffer\(null\)\s*setReviewState\(null\)\s*setGuard\(null\)\s*setGuardLists\(null\)\s*setAnswer\(null\)\s*setNotice\(null\)\s*setText\(''\)\s*onSaved\?\.\(\)\s*onClose\?\.\(\)/.test(rest), 'the old path, in the old order, with only the offer cleared first')
+  assert.ok(/setOffer\(null\)\s*setWorkPanel\(null\)\s*setReviewState\(null\)\s*setGuard\(null\)\s*setGuardLists\(null\)\s*setAnswer\(null\)\s*setNotice\(null\)\s*setText\(''\)\s*onSaved\?\.\(\)\s*onClose\?\.\(\)/.test(rest), 'the old path, in the old order, with only the offer and the P10 work panel cleared first')
 })
 
 test('Y5: Open Learning ROI = putHandoff, then the route from the page table, then goTo; No thanks hands nothing over', () => {
@@ -105,7 +105,7 @@ test('Y5: Open Learning ROI = putHandoff, then the route from the page table, th
 
 test('Y6: Money Inbox still writes nothing and reads nothing new', () => {
   assert.ok(!/\.(insert|update|upsert|delete|rpc)\(/.test(code))
-  assert.equal((code.match(/\.from\('/g) || []).length, 14, 'the count of reads is what P9 left')
+  assert.equal((code.match(/\.from\('/g) || []).length, 16, 'the reads P9 left (14) plus the two select-only salary reads P10 adds')
   assert.ok(!/learning_items/.test(offerHandler + close))
 })
 
@@ -138,8 +138,8 @@ test('Y9: only Money Inbox imports learningOffer.js; the contract table and the 
   }
   walk(SRC)
   assert.deepStrictEqual(importers, [INPUT])
-  assert.equal(sha(read('lib/command/intents.js')), '8e86d0de49d05949')
-  assert.ok(/BUILT_THROUGH = 'P9'/.test(read('lib/command/intents.js')))
+  assert.equal(sha(read('lib/command/intents.js')), '629a6efd6f40950f') // P10: only the BUILT_THROUGH line changed (P8b was 8e86d0de49d05949)
+  assert.ok(/BUILT_THROUGH = 'P10'/.test(read('lib/command/intents.js')))
 })
 
 test('Y10: the locked files are byte-for-byte what they were', () => {

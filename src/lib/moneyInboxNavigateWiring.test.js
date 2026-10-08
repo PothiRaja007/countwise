@@ -48,7 +48,7 @@ test('N1: a page opens only after interpret(), only for a complete request, and 
   const e = code.indexOf('buildReviewCandidates(text')
   assert.ok(i > 0 && m > i && n > m && r > n && e > r, 'interpret → reference memory → navigation → question → entry flow, in that order')
   assert.equal((code.match(/navigate\(/g) || []).length, 1, 'the router is called in exactly one place (goTo)')
-  assert.equal((code.match(/\bgoTo\(/g) || []).length, 6, 'goTo is called from the typed request, from a page choice, from a goal hand-off (P7), a learning hand-off (P8), a budget hand-off (P9) and the learning-payment offer (P8b), nowhere else')
+  assert.equal((code.match(/\bgoTo\(/g) || []).length, 8, 'goTo is called from the typed request, from a page choice, from a goal hand-off (P7), a learning hand-off (P8), a budget hand-off (P9), the learning-payment offer (P8b), Open Salary and the pension Open button (P10), nowhere else')
   assert.ok(/const destination = navigationFromResult\(interpreted\)\s*if \(destination\) \{\s*goTo\(destination\)\s*return\s*\}/.test(code), 'a page request ends there')
   assert.ok(/useNavigate\(\)/.test(code), 'the router hook is used')
   assert.equal((code.match(/navigationFromResult\(/g) || []).length, 1)
@@ -71,7 +71,7 @@ test('N3: opening a page reads and writes nothing, and does not claim anything w
   assert.ok(!/supabase|await |\.from\(/.test(branch), 'the typed-request branch reads nothing')
   assert.ok(/setText\(''\)/.test(goTo) && /onClose\?\.\(\)/.test(goTo), 'Money Inbox is reset and the floating panel closes')
   // P6 adds no read at all: the count is exactly what P5 left (the entry and guard reads, plus the question reads).
-  assert.equal((code.match(/\.from\('/g) || []).length, 14)
+  assert.equal((code.match(/\.from\('/g) || []).length, 16) // 14 through P9, plus the two select-only salary reads of P10
 })
 
 test('N4: the remembered goal is applied after interpret() and before a question or command is used; Money Inbox never writes the memory', () => {

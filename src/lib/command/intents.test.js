@@ -190,11 +190,11 @@ test('I8: exactly six allowed pages, each a real route, and none of the excluded
   assert.throws(() => I.pageRoute('settings'))
 })
 
-test('I9: availability — with BUILT_THROUGH = P7 today\'s path, the two goal commands, the four questions and opening a page are available; unknown phases and intents throw', () => {
-  assert.strictEqual(I.BUILT_THROUGH, 'P9')
-  assert.deepStrictEqual(I.INTENT_IDS.filter((id) => I.isIntentAvailable(id)), ['RECORD_TRANSACTION', 'RECORD_LEARNING_PAYMENT', 'CREATE_GOAL', 'MODIFY_GOAL_CONTRIBUTE', 'CREATE_BUDGET_MONTH', 'MODIFY_BUDGET_AMOUNT', 'CREATE_LEARNING_ITEM', 'MODIFY_LEARNING_STATUS', 'QUERY_SPEND', 'QUERY_BUDGET_LEFT', 'QUERY_GOAL_PROGRESS', 'QUERY_BALANCE', 'NAVIGATE'])
-  assert.strictEqual(I.isIntentAvailable('QUERY_PENSION_ESTIMATE'), false) // pension waits for P10
-  assert.strictEqual(I.isIntentAvailable('RECORD_SALARY'), false) // salary waits for P10
+test('I9: availability — with BUILT_THROUGH = P10 today\'s path, the two goal commands, the four questions and opening a page are available; unknown phases and intents throw', () => {
+  assert.strictEqual(I.BUILT_THROUGH, 'P10')
+  assert.deepStrictEqual(I.INTENT_IDS.filter((id) => I.isIntentAvailable(id)), ['RECORD_TRANSACTION', 'RECORD_SALARY', 'RECORD_LEARNING_PAYMENT', 'CREATE_GOAL', 'MODIFY_GOAL_CONTRIBUTE', 'CREATE_BUDGET_MONTH', 'MODIFY_BUDGET_AMOUNT', 'CREATE_LEARNING_ITEM', 'MODIFY_LEARNING_STATUS', 'QUERY_SPEND', 'QUERY_BUDGET_LEFT', 'QUERY_GOAL_PROGRESS', 'QUERY_BALANCE', 'QUERY_PENSION_ESTIMATE', 'NAVIGATE'])
+  assert.strictEqual(I.isIntentAvailable('QUERY_PENSION_ESTIMATE'), true) // pension estimate is built (P10)
+  assert.strictEqual(I.isIntentAvailable('RECORD_SALARY'), true) // salary is built (P10)
   assert.strictEqual(I.isIntentAvailable('CREATE_BUDGET_MONTH'), true) // budgets are built (P9)
   assert.ok(I.phaseIndex('P0') < I.phaseIndex('P1') && I.phaseIndex('P9') < I.phaseIndex('P10'))
   assert.strictEqual(I.PHASE_ORDER.length, 14)
@@ -204,7 +204,7 @@ test('I9: availability — with BUILT_THROUGH = P7 today\'s path, the two goal c
 
 test('I10: the folder is pure — only the known modules, importing only each other, with no clock, randomness or database', () => {
   const files = readdirSync(HERE).filter((f) => f.endsWith('.js') && !f.endsWith('.test.js')).sort()
-  assert.deepStrictEqual(files, ['amountReader.js', 'budgetCommands.js', 'budgetDialog.js', 'commandContext.js', 'entityResolver.js', 'expectedRouting.js', 'goalCommands.js', 'goalDialog.js', 'guardView.js', 'handoff.js', 'intents.js', 'interpreter.js', 'learningCommands.js', 'learningDialog.js', 'learningOffer.js', 'pendingAction.js', 'periodParser.js', 'queries.js'], 'a new module needs a deliberate review')
+  assert.deepStrictEqual(files, ['amountReader.js', 'budgetCommands.js', 'budgetDialog.js', 'commandContext.js', 'entityResolver.js', 'expectedRouting.js', 'goalCommands.js', 'goalDialog.js', 'guardView.js', 'handoff.js', 'intents.js', 'interpreter.js', 'learningCommands.js', 'learningDialog.js', 'learningOffer.js', 'pendingAction.js', 'pensionEstimate.js', 'periodParser.js', 'queries.js', 'salaryReceipt.js'], 'a new module needs a deliberate review')
   for (const f of files) {
     const code = stripComments(readFileSync(fileURLToPath(new URL(f, HERE)), 'utf8'))
     const specs = [...code.matchAll(/import\s[^;]*?from\s*['"]([^'"]+)['"]|import\s*['"]([^'"]+)['"]/g)].map((m) => m[1] || m[2])

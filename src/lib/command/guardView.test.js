@@ -68,7 +68,7 @@ test('G2: every choice does the right thing — cancel, edit, continue, unavaila
   for (const [text, id] of [['I need 50000 for a laptop', 'create_goal'], ['goal', 'create_goal']]) {
     assert.deepStrictEqual(resolveGuardChoice(run(text), id, NOW), { action: 'start', intent: 'CREATE_GOAL', choiceId: id }, `${text} → ${id}`)
   }
-  // Learning commands (P8) and budget commands (P9) are built, so their buttons start too; salary and pension wait for P10.
+  // Learning commands (P8) and budget commands (P9) are built, so their buttons start too; salary and pension are built in P10 (lib/command/salaryReceipt.js, pensionEstimate.js).
   for (const [text, id, intent] of [['Power BI', 'learning_status_l1', 'MODIFY_LEARNING_STATUS'], ['learning', 'add_learning', 'CREATE_LEARNING_ITEM']]) {
     assert.deepStrictEqual(resolveGuardChoice(run(text), id, NOW), { action: 'start', intent, choiceId: id }, `${text} → ${id}`)
   }
@@ -223,8 +223,8 @@ test('G9: determinism — the same result gives the same panel', () => {
 })
 
 test('G10: availability follows BUILT_THROUGH — a normal transaction, the goal and learning commands, the four built questions and opening a page; an available intent would start', () => {
-  assert.strictEqual(BUILT_THROUGH, 'P9')
-  assert.deepStrictEqual(Object.keys(CONTRACTS).filter((id) => isIntentAvailable(id)), ['RECORD_TRANSACTION', 'RECORD_LEARNING_PAYMENT', 'CREATE_GOAL', 'MODIFY_GOAL_CONTRIBUTE', 'CREATE_BUDGET_MONTH', 'MODIFY_BUDGET_AMOUNT', 'CREATE_LEARNING_ITEM', 'MODIFY_LEARNING_STATUS', 'QUERY_SPEND', 'QUERY_BUDGET_LEFT', 'QUERY_GOAL_PROGRESS', 'QUERY_BALANCE', 'NAVIGATE'])
+  assert.strictEqual(BUILT_THROUGH, 'P10')
+  assert.deepStrictEqual(Object.keys(CONTRACTS).filter((id) => isIntentAvailable(id)), ['RECORD_TRANSACTION', 'RECORD_SALARY', 'RECORD_LEARNING_PAYMENT', 'CREATE_GOAL', 'MODIFY_GOAL_CONTRIBUTE', 'CREATE_BUDGET_MONTH', 'MODIFY_BUDGET_AMOUNT', 'CREATE_LEARNING_ITEM', 'MODIFY_LEARNING_STATUS', 'QUERY_SPEND', 'QUERY_BUDGET_LEFT', 'QUERY_GOAL_PROGRESS', 'QUERY_BALANCE', 'QUERY_PENSION_ESTIMATE', 'NAVIGATE'])
   const r = run('I need 50000 for a laptop')
   assert.deepStrictEqual(resolveGuardChoice(r, 'create_goal', NOW, () => true), { action: 'start', intent: 'CREATE_GOAL', choiceId: 'create_goal' })
   assert.deepStrictEqual(resolveGuardChoice(r, 'create_goal', NOW, () => false), { action: 'unavailable', message: GUARD_MESSAGES.unavailable })
@@ -236,7 +236,7 @@ test('G11: a built question with something still open asks for one more detail; 
   assert.strictEqual(open.footer, GUARD_MESSAGES.needDetail)
   assert.strictEqual(GUARD_MESSAGES.needDetail, 'I need one more detail before I can answer. Nothing was saved.')
   assert.strictEqual(view('How much is left in my budget?').footer, GUARD_MESSAGES.needDetail)
-  assert.strictEqual(view('How much did I pay for my pension?').footer, GUARD_MESSAGES.footer) // pension is P10
+  assert.strictEqual(view('How much did I pay for my pension?').footer, GUARD_MESSAGES.needDetail) // the pension estimate is built (P10), so this asks for one more detail instead of saying it is not available
   // A goal command is built (P7). The base view words every built request that is not a question as "one more
   // detail"; lib/command/goalCommands.js replaces that footer for a ready goal command (guardView.js stays as it was).
   assert.strictEqual(view('Create a goal for a laptop worth 50000').footer, GUARD_MESSAGES.needDetail)

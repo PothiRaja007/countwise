@@ -23,6 +23,10 @@ import { goalCommandView, resolveGoalCommandChoice, choiceNotice, GOAL_COMMAND_M
 import { learningCommandView, resolveLearningCommandChoice, learningChoiceNotice, LEARNING_COMMAND_MESSAGES } from '../../lib/command/learningCommands.js'
 import { detectLearningPayment, learningOfferView, learningOfferPending, LEARNING_OFFER_CHOICES, LEARNING_OFFER_MESSAGES } from '../../lib/command/learningOffer.js'
 import { budgetCommandView, resolveBudgetCommandChoice, budgetChoiceNotice, BUDGET_COMMAND_MESSAGES } from '../../lib/command/budgetCommands.js'
+import { detectSalaryReceipt, salaryReceiptState, salaryReceiptView, resolveSalaryChoice, salaryReceiptPending, salaryReceiptText, SALARY_CHOICES, SALARY_MESSAGES } from '../../lib/command/salaryReceipt.js'
+import { pensionQuestionFromResult, pensionQuestionFromChoice, looksLikePensionEstimateRequest, pensionAnswer, pensionDataProblem, PENSION_ACTIONS, PENSION_MESSAGES } from '../../lib/command/pensionEstimate.js'
+import { estimatedTakeHomeMonthly, sumByCategory } from '../../lib/salaryEngine.js'
+import { calculateRetirementBreakdown } from '../../lib/pfEngine.js'
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
 
@@ -88,6 +92,81 @@ async function readQueryData(request, userId) {
   return data
 }
 
+// P10 — the active salary structure and its components, for the salary suggestion and the pension estimate.
+// Select-only and for this user only. Money Inbox saves nothing from here.
+async function readActiveSalary(userId) {
+  const found = await supabase.from('salary_structures').select('id, label').eq('user_id', userId).eq('is_active', true).maybeSingle()
+  if (found.error) throw found.error
+  if (!found.data) return { structure: null, components: [] }
+  const parts = await supabase.from('salary_components').select('name, category, monthly_amount').eq('user_id', userId).eq('structure_id', found.data.id)
+  if (parts.error) throw parts.error
+  return { structure: found.data, components: parts.data || [] }
+}
+
+function todayISO() {
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+
+// P10 — the salary suggestion panel. Its buttons only fill the text box or open a page; nothing is saved here.
+function SalaryReceiptPanel({ view, onChoose }) {
+  return (
+    <div className="space-y-3" role="region" aria-live="polite" aria-label="Salary received">
+      <h3 className="text-sm font-medium text-ink dark:text-offwhite">{view.title}</h3>
+      {view.message && <p className="text-xs text-muted dark:text-mutedDark">{view.message}</p>}
+      <p className="text-xs text-muted dark:text-mutedDark">{view.footer}</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        {view.choices.map((choice) => (
+          <Button
+            key={choice.id}
+            type="button"
+            variant={choice.id === SALARY_CHOICES.cancel ? 'secondary' : 'primary'}
+            onClick={() => onChoose(choice.id)}
+            className="px-3 py-2 rounded-lg"
+          >
+            {choice.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// P10 — the pension estimate, in its own small panel labelled Estimated. It records and changes nothing.
+function PensionEstimatePanel({ answer, onAction, onAskAgain, onClose }) {
+  return (
+    <div className="space-y-3" role="region" aria-live="polite" aria-label="Pension estimate">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted dark:text-mutedDark">Estimated</p>
+      <h3 className="text-sm font-medium text-ink dark:text-offwhite">{answer.headline}</h3>
+      {answer.rows.length > 0 && (
+        <dl className="space-y-2">
+          {answer.rows.map((row) => (
+            <div key={row.label}>
+              <div className="flex justify-between gap-3 text-sm">
+                <dt className="text-ink dark:text-offwhite">{row.label}</dt>
+                <dd className="text-ink dark:text-offwhite">{row.value}</dd>
+              </div>
+              {row.note && <p className="text-xs text-muted dark:text-mutedDark">{row.note}</p>}
+            </div>
+          ))}
+        </dl>
+      )}
+      {answer.basis && <p className="text-xs text-muted dark:text-mutedDark">{answer.basis}</p>}
+      {answer.partial && <p className="text-xs text-muted dark:text-mutedDark">{PENSION_MESSAGES.partial}</p>}
+      <p className="text-xs text-muted dark:text-mutedDark">{answer.note}</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        {answer.action && (
+          <Button type="button" variant="secondary" onClick={() => onAction(answer.action.id)} className="px-3 py-2 rounded-lg">
+            {answer.action.label}
+          </Button>
+        )}
+        <Button type="button" variant="secondary" onClick={onAskAgain} className="px-3 py-2 rounded-lg">Ask something else</Button>
+        <Button type="button" variant="primary" onClick={onClose} className="px-3 py-2 rounded-lg">Close</Button>
+      </div>
+    </div>
+  )
+}
+
 // The optional offer after a saved learning payment (P8b). Two buttons; neither saves anything here.
 function LearningOfferPanel({ view, onChoose }) {
   return (
@@ -137,6 +216,8 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
   // saved. The rows the review screen reports as saved are collected here until it closes.
   const [offer, setOffer] = useState(null)
   const savedRowsRef = useRef([])
+  // P10: the salary suggestion or the pension estimate, shown in place of the text box. Nothing here is saved.
+  const [workPanel, setWorkPanel] = useState(null)
 
   // Answers one complete question. It never falls back to the entry flow: a question
   // that cannot be read gives the "couldn't read your data" answer and no number.
@@ -159,9 +240,34 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
     setGuardLists(null)
     setAnswer(null)
     setOffer(null)
+    setWorkPanel(null)
     setNotice(null)
     setText('')
     onClose?.()
+  }
+
+  // P10 — what the salary suggestion and the pension estimate read and work out. Neither saves anything.
+  const salaryStateFor = async () => {
+    try {
+      const found = await readActiveSalary(user.id)
+      if (!found.structure) return salaryReceiptState({ hasStructure: false })
+      return salaryReceiptState({ hasStructure: true, takeHome: found.components.length > 0 ? estimatedTakeHomeMonthly(found.components) : null })
+    } catch {
+      return salaryReceiptState({ readFailed: true })
+    }
+  }
+  const pensionFor = async () => {
+    try {
+      const found = await readActiveSalary(user.id)
+      if (!found.structure) return pensionAnswer({ status: 'no_structure' }, { formatMoney: formatCurrency })
+      const basic = sumByCategory(found.components).totals.basic || 0
+      if (!(basic > 0)) return pensionAnswer({ status: 'no_basic' }, { formatMoney: formatCurrency })
+      const calculationDate = todayISO()
+      const breakdown = await calculateRetirementBreakdown(basic, calculationDate)
+      return pensionAnswer({ status: 'ok', structureLabel: found.structure.label, basicMonthly: basic, breakdown, calculationDate }, { formatMoney: formatCurrency })
+    } catch {
+      return pensionDataProblem()
+    }
   }
 
   // `options.skipGuard` is only used when the user explicitly chose "record it as an
@@ -251,9 +357,26 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
             setAnswer(await answerFor(request))
             return
           }
+          // A complete pension question (P10) is answered as an estimate; it has no Money Inbox query.
+          if (pensionQuestionFromResult(interpreted)) {
+            setWorkPanel({ kind: 'pension', answer: await pensionFor() })
+            return
+          }
           setGuard(interpreted)
           setGuardLists(lists)
           return
+        }
+        if (interpreted && interpreted.kind === 'transaction') {
+          // P10: a plain "I received my salary" gets an estimated amount to start from, and a plain
+          // "pension estimate" request gets the estimate. Everything else, including every typed amount, goes on.
+          if (detectSalaryReceipt(text)) {
+            setWorkPanel({ kind: 'salary', text, state: await salaryStateFor() })
+            return
+          }
+          if (looksLikePensionEstimateRequest(text)) {
+            setWorkPanel({ kind: 'pension', answer: await pensionFor() })
+            return
+          }
         }
       }
 
@@ -309,6 +432,7 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       return
     }
     setOffer(null)
+    setWorkPanel(null)
     setReviewState(null)
     setGuard(null)
     setGuardLists(null)
@@ -463,6 +587,13 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         goTo(destination)
         return
       }
+      // "Show my pension estimate" (P10).
+      if (outcome.intent === 'QUERY_PENSION_ESTIMATE' && pensionQuestionFromChoice(outcome.choiceId)) {
+        setLoading(true)
+        setWorkPanel({ kind: 'pension', answer: await pensionFor() })
+        setLoading(false)
+        return
+      }
       const request = queryFromChoice(outcome.choiceId, guardLists, initialDate ? new Date(initialDate) : new Date())
       if (!request) {
         setNotice(QUERY_MESSAGES.choiceGone)
@@ -504,6 +635,55 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
       setText('')
       onClose?.()
     }
+  }
+
+  // The salary suggestion's buttons (P10). "Use" only puts the words and the estimated amount in the text box
+  // for the normal review screen; nothing is saved until the user confirms there.
+  const handleSalaryChoice = (choiceId) => {
+    const panel = workPanel
+    if (!panel || panel.kind !== 'salary') return
+    let outcome
+    try {
+      outcome = resolveSalaryChoice(panel.state, choiceId)
+    } catch {
+      outcome = { action: 'unknown' }
+    }
+    if (outcome.action === SALARY_CHOICES.use) {
+      try {
+        const pending = salaryReceiptPending(panel.state, { id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `salary-${Date.now()}`, source: panel.text, now: Date.now() })
+        setText(salaryReceiptText(panel.text, pending.fields.amount.value))
+        setWorkPanel(null)
+        setNotice(SALARY_MESSAGES.fillNote)
+      } catch {
+        setWorkPanel(null)
+        setNotice(SALARY_MESSAGES.noSuggestion)
+      }
+    } else if (outcome.action === SALARY_CHOICES.type) {
+      setWorkPanel(null)
+      setNotice(null)
+      handleParse({ skipGuard: true })
+    } else if (outcome.action === SALARY_CHOICES.open) {
+      const destination = navigationFromChoice('open_salary')
+      if (destination) goTo(destination)
+    } else if (outcome.action === SALARY_CHOICES.cancel) {
+      setWorkPanel(null)
+      setNotice(null)
+      setText('')
+    }
+  }
+  // The pension estimate's buttons (P10). They open a page or reset; nothing is saved.
+  const handlePensionAction = (actionId) => {
+    const destination = actionId === PENSION_ACTIONS.salary || actionId === PENSION_ACTIONS.pension ? navigationFromChoice(actionId) : null
+    if (destination) goTo(destination)
+  }
+  const handleWorkAskAgain = () => {
+    setWorkPanel(null)
+    setText('')
+  }
+  const handleWorkClose = () => {
+    setWorkPanel(null)
+    setText('')
+    onClose?.()
   }
 
   // The answer view's two buttons (P5). Neither saves anything.
@@ -555,6 +735,12 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
         <CommandGuardPanel view={budgetCommandView(learningCommandView(goalCommandView(buildGuardView(guard), guard, guardLists?.activeGoals, Date.now()), guard, guardLists?.learningItems, Date.now()), guard, guardLists?.expenseCategories, Date.now())} onChoose={handleGuardChoice} />
       ) : offer ? (
         <LearningOfferPanel view={learningOfferView(offer)} onChoose={handleOfferChoice} />
+      ) : workPanel ? (
+        workPanel.kind === 'salary' ? (
+          <SalaryReceiptPanel view={salaryReceiptView(workPanel.state)} onChoose={handleSalaryChoice} />
+        ) : (
+          <PensionEstimatePanel answer={workPanel.answer} onAction={handlePensionAction} onAskAgain={handleWorkAskAgain} onClose={handleWorkClose} />
+        )
       ) : (
         <>
       <p className="text-sm text-muted dark:text-mutedDark">

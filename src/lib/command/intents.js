@@ -83,7 +83,7 @@ export const PHASE_ORDER = deepFreeze(['P0', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6',
 // The last phase that has been BUILT. Each phase changes this one line, on purpose,
 // and the test that pins it changes with it. It stops the screen from ever handing
 // off to an owner that is not built yet.
-export const BUILT_THROUGH = 'P9'
+export const BUILT_THROUGH = 'P10'
 
 export function phaseIndex(phase) {
   const i = PHASE_ORDER.indexOf(phase)
