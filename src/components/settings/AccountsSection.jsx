@@ -184,7 +184,7 @@ export default function AccountsSection() {
   if (error) {
     return (
       <div>
-        <p className="text-sm text-bad">{error}</p>
+        <p className="text-sm text-badText">{error}</p>
         <Button variant="text" onClick={load} className="mt-1.5 text-sm">
           Retry
         </Button>
@@ -253,7 +253,7 @@ export default function AccountsSection() {
                   )}
                   <span className="text-xs text-muted dark:text-mutedDark shrink-0">{account.type}</span>
                   {isDefault && (
-                    <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-gold/40 text-gold shrink-0">
+                    <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-gold/40 text-goldText shrink-0">
                       <Star size={11} className="fill-gold" />
                       Default
                     </span>
@@ -271,7 +271,7 @@ export default function AccountsSection() {
                       <button
                         onClick={() => handleRenameSave(account)}
                         aria-label="Save name"
-                        className="p-1.5 text-good hover:bg-paper dark:hover:bg-charcoal rounded"
+                        className="p-1.5 text-goodText hover:bg-paper dark:hover:bg-charcoal rounded"
                       >
                         <Check size={15} />
                       </button>
@@ -309,7 +309,7 @@ export default function AccountsSection() {
                         aria-label={account.is_active ? `Deactivate ${account.name}` : `Reactivate ${account.name}`}
                         title={account.is_active ? 'Deactivate' : 'Reactivate'}
                         className={`p-1.5 rounded hover:bg-paper dark:hover:bg-charcoal disabled:opacity-40 ${
-                          account.is_active ? 'text-muted dark:text-mutedDark' : 'text-gold'
+                          account.is_active ? 'text-muted dark:text-mutedDark' : 'text-goldText'
                         }`}
                       >
                         <Power size={15} />
@@ -321,7 +321,7 @@ export default function AccountsSection() {
 
               <div className="mt-1.5 font-mono text-sm text-ink dark:text-offwhite">{formatCurrency(balance)}</div>
 
-              {rowError[account.id] && <p className="text-xs text-bad mt-1.5">{rowError[account.id]}</p>}
+              {rowError[account.id] && <p className="text-xs text-badText mt-1.5">{rowError[account.id]}</p>}
             </div>
           )
         })}

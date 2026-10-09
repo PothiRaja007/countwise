@@ -197,7 +197,7 @@ export default function Login() {
               />
             </div>
 
-            {recoveryError && <p className="text-sm text-bad">{recoveryError}</p>}
+            {recoveryError && <p className="text-sm text-badText">{recoveryError}</p>}
 
             <Button
               type="submit"
@@ -210,7 +210,7 @@ export default function Login() {
 
           <button
             onClick={resetRecoveryState}
-            className="w-full text-sm text-muted dark:text-mutedDark hover:text-gold mt-4 transition-colors"
+            className="w-full text-sm text-muted dark:text-mutedDark hover:text-goldText mt-4 transition-colors"
           >
             Back to Sign In
           </button>
@@ -247,8 +247,8 @@ export default function Login() {
               />
             </div>
 
-            {recoveryError && <p className="text-sm text-bad">{recoveryError}</p>}
-            {recoveryInfo && !recoveryError && <p className="text-sm text-good">{recoveryInfo}</p>}
+            {recoveryError && <p className="text-sm text-badText">{recoveryError}</p>}
+            {recoveryInfo && !recoveryError && <p className="text-sm text-goodText">{recoveryInfo}</p>}
 
             <Button
               type="submit"
@@ -262,14 +262,14 @@ export default function Login() {
           <div className="flex items-center justify-between mt-4">
             <button
               onClick={resetRecoveryState}
-              className="text-sm text-muted dark:text-mutedDark hover:text-gold transition-colors"
+              className="text-sm text-muted dark:text-mutedDark hover:text-goldText transition-colors"
             >
               Back to Sign In
             </button>
             <button
               onClick={handleResendCode}
               disabled={recoveryLoading}
-              className="text-sm text-muted dark:text-mutedDark hover:text-gold transition-colors disabled:opacity-40"
+              className="text-sm text-muted dark:text-mutedDark hover:text-goldText transition-colors disabled:opacity-40"
             >
               Resend code
             </button>
@@ -289,7 +289,7 @@ export default function Login() {
           </div>
           <div className="font-display text-2xl font-semibold tracking-tight mb-1">
             <span className="text-ink dark:text-offwhite">Count</span>
-            <span className="text-gold">Wise</span>
+            <span className="text-goldText">Wise</span>
           </div>
           <div className="text-xs font-medium tracking-widest text-muted dark:text-mutedDark uppercase mb-4">
             Every expense counts
@@ -343,7 +343,7 @@ export default function Login() {
                   return (
                     <li
                       key={rule}
-                      className={`text-xs ${met ? 'text-good' : 'text-muted dark:text-mutedDark'}`}
+                      className={`text-xs ${met ? 'text-goodText' : 'text-muted dark:text-mutedDark'}`}
                     >
                       {met ? '✓' : '·'} {rule}
                     </li>
@@ -353,14 +353,14 @@ export default function Login() {
             )}
           </div>
 
-          {error && <p className="text-sm text-bad">{error}</p>}
-          {info && <p className="text-sm text-good">{info}</p>}
+          {error && <p className="text-sm text-badText">{error}</p>}
+          {info && <p className="text-sm text-goodText">{info}</p>}
 
           {mode === 'signin' && (
             <button
               type="button"
               onClick={() => setRecoveryStep('request')}
-              className="text-xs text-muted dark:text-mutedDark hover:text-gold transition-colors"
+              className="text-xs text-muted dark:text-mutedDark hover:text-goldText transition-colors"
             >
               Forgot password?
             </button>
@@ -381,7 +381,7 @@ export default function Login() {
             setError(null)
             setInfo(null)
           }}
-          className="w-full text-sm text-muted dark:text-mutedDark hover:text-gold mt-4 transition-colors"
+          className="w-full text-sm text-muted dark:text-mutedDark hover:text-goldText mt-4 transition-colors"
         >
           {mode === 'signin'
             ? "Don't have an account? Sign up"

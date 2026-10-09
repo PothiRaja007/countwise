@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { available } from '../../lib/financialEngine.js'
@@ -28,6 +28,7 @@ export default function ContributeModal({ mode, goal, currentProgress, accounts,
   const [accountId, setAccountId] = useState(initialAccountId !== undefined ? initialAccountId : (accounts[0]?.id || ''))
   const [amount, setAmount] = useState(initialAmount !== undefined ? String(initialAmount) : '')
   const [saving, setSaving] = useState(false)
+  const inFlight = useRef(false)
   const [localError, setLocalError] = useState(null)
 
   const isContribution = mode === 'contribution'
@@ -41,7 +42,7 @@ export default function ContributeModal({ mode, goal, currentProgress, accounts,
 
   const canSave = numericAmount > 0 && !!accountId && !overLimit
 
-  const handleSave = async () => {
+  const saveOnce = async () => {
     if (!canSave) return
     setSaving(true)
     setLocalError(null)
@@ -78,6 +79,18 @@ export default function ContributeModal({ mode, goal, currentProgress, accounts,
 
     setSaving(false)
     onSaved()
+  }
+
+  // P14 (N-6): a ref flips synchronously, so two clicks in the same instant cannot both pass,
+  // which the disabled button alone (it only updates on the next render) cannot promise.
+  const handleSave = async () => {
+    if (inFlight.current) return
+    inFlight.current = true
+    try {
+      await saveOnce()
+    } finally {
+      inFlight.current = false
+    }
   }
 
   return (
@@ -135,14 +148,14 @@ export default function ContributeModal({ mode, goal, currentProgress, accounts,
           />
 
           {overLimit && numericAmount > 0 && (
-            <p className="text-xs text-bad">
+            <p className="text-xs text-badText">
               {isContribution
                 ? `That's more than this account's available balance (${formatCurrency(accountAvailable)}). Lower the amount or pick another account.`
                 : `That's more than this goal's current progress (${formatCurrency(currentProgress)}).`}
             </p>
           )}
 
-          {localError && <p className="text-xs text-bad">{localError}</p>}
+          {localError && <p className="text-xs text-badText">{localError}</p>}
         </div>
 
         <div className="flex justify-end gap-2">

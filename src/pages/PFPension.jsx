@@ -165,7 +165,7 @@ function ExplainAction({ label, result }) {
         </Button>
       )}
 
-      {error && <p className="text-xs text-bad mt-1.5">{error}</p>}
+      {error && <p className="text-xs text-badText mt-1.5">{error}</p>}
 
       {/* Deliberately NOT a ValueBadge and NOT the gold dashed-border
           treatment used for calculated/estimated/suggested values — an
@@ -308,7 +308,7 @@ export default function PFPension() {
       {!structure ? (
         <div className="max-w-2xl border-t border-line dark:border-lineDark pt-7">
           <div className="flex items-start gap-3">
-            <Landmark size={18} className="text-gold mt-0.5 shrink-0" />
+            <Landmark size={18} className="text-goldText mt-0.5 shrink-0" />
             <div>
               <p className="text-sm font-medium">No active salary structure</p>
               <p className="text-sm text-muted dark:text-mutedDark mt-1">
@@ -344,7 +344,7 @@ export default function PFPension() {
 
           <section className="border-y border-line dark:border-lineDark py-5">
             <div className="flex items-start gap-3">
-              <ShieldCheck size={17} className="text-gold mt-0.5 shrink-0" />
+              <ShieldCheck size={17} className="text-goldText mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium">Retirement benefits are separate from your everyday money</p>
                 <p className="text-xs text-muted dark:text-mutedDark mt-1 max-w-2xl">
@@ -392,7 +392,7 @@ export default function PFPension() {
 
           {breakdown?.status === 'partial' && (
             <div className="flex items-start gap-3 border-t border-line dark:border-lineDark pt-5">
-              <AlertTriangle size={16} className="text-gold mt-0.5 shrink-0" />
+              <AlertTriangle size={16} className="text-goldText mt-0.5 shrink-0" />
               <p className="text-xs text-muted dark:text-mutedDark">
                 One or more verified rules were unavailable for this calculation date. CountWise has not substituted zeroes or guessed values.
               </p>

@@ -15,11 +15,11 @@ export default function InstallAccess({ mode, onInstalled, onUseBrowser }) {
 
   const backLink =
     mode === 'first-run' ? (
-      <Link to="/welcome" className="text-sm text-muted dark:text-mutedDark hover:text-gold transition-colors">
+      <Link to="/welcome" className="text-sm text-muted dark:text-mutedDark hover:text-goldText transition-colors">
         ← Back to features
       </Link>
     ) : (
-      <Link to="/" className="text-sm text-muted dark:text-mutedDark hover:text-gold transition-colors">
+      <Link to="/" className="text-sm text-muted dark:text-mutedDark hover:text-goldText transition-colors">
         ← Back to CountWise
       </Link>
     )
@@ -30,7 +30,7 @@ export default function InstallAccess({ mode, onInstalled, onUseBrowser }) {
         <div className="flex items-center justify-between">
           <div className="font-display text-lg font-semibold tracking-tight">
             <span className="text-ink dark:text-offwhite">Count</span>
-            <span className="text-gold">Wise</span>
+            <span className="text-goldText">Wise</span>
           </div>
           {backLink}
         </div>
@@ -56,7 +56,7 @@ export default function InstallAccess({ mode, onInstalled, onUseBrowser }) {
                 <h2 id={`os-${p.id}`} className="font-display text-lg font-semibold">
                   {p.label}
                 </h2>
-                {p.id === os && <span className="text-xs uppercase tracking-[0.14em] text-gold">This device</span>}
+                {p.id === os && <span className="text-xs uppercase tracking-[0.14em] text-goldText">This device</span>}
               </div>
 
               <div className="mt-3 text-sm leading-relaxed text-muted dark:text-mutedDark">

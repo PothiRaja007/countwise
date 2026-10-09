@@ -23,7 +23,7 @@ export default function MoneyInboxTrigger() {
         type="button"
         onClick={handleOpen}
         aria-label="Open Money Inbox"
-        className="fixed z-40 bottom-3 right-1/2 translate-x-1/2 w-12 h-12 md:bottom-6 md:right-6 md:translate-x-0 md:w-14 md:h-14 rounded-full bg-gold text-white flex items-center justify-center shadow-lg hover:bg-gold/90 transition-colors"
+        className="fixed z-40 bottom-3 right-1/2 translate-x-1/2 w-12 h-12 md:bottom-6 md:right-6 md:translate-x-0 md:w-14 md:h-14 rounded-full bg-gold text-ink flex items-center justify-center shadow-lg hover:bg-gold/90 transition-colors"
       >
         <Plus size={24} />
       </button>

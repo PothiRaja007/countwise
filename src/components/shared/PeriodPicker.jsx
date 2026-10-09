@@ -16,7 +16,7 @@ export default function PeriodPicker({ periods, periodKey, onChange, rangeLabel,
             onClick={() => onChange(item.key)}
             className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
               periodKey === item.key
-                ? 'bg-gold text-white'
+                ? 'bg-gold text-ink'
                 : 'text-muted dark:text-mutedDark hover:text-ink dark:hover:text-offwhite'
             }`}
           >

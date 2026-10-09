@@ -116,7 +116,7 @@ export default function StatementImportModal({ accounts, categories, onClose }) 
           {loading ? 'Reading file...' : fileName ? `Chosen: ${fileName}` : 'Choose CSV file'}
         </Button>
 
-        {error && <p className="text-sm text-bad mt-3">{error}</p>}
+        {error && <p className="text-sm text-badText mt-3">{error}</p>}
 
         <p className="text-xs text-muted dark:text-mutedDark mt-4">
           Expects a Date column, a Description/Narration column, and either Debit/Credit columns or a single signed

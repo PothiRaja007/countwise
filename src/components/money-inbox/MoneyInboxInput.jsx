@@ -142,12 +142,10 @@ function PensionEstimatePanel({ answer, onAction, onAskAgain, onClose }) {
       {answer.rows.length > 0 && (
         <dl className="space-y-2">
           {answer.rows.map((row) => (
-            <div key={row.label}>
-              <div className="flex justify-between gap-3 text-sm">
-                <dt className="text-ink dark:text-offwhite">{row.label}</dt>
-                <dd className="text-ink dark:text-offwhite">{row.value}</dd>
-              </div>
-              {row.note && <p className="text-xs text-muted dark:text-mutedDark">{row.note}</p>}
+            <div key={row.label} className="flex flex-wrap justify-between gap-x-3 text-sm">
+              <dt className="text-ink dark:text-offwhite">{row.label}</dt>
+              <dd className="text-ink dark:text-offwhite">{row.value}</dd>
+              {row.note && <dd className="w-full text-xs text-muted dark:text-mutedDark">{row.note}</dd>}
             </div>
           ))}
         </dl>
@@ -804,7 +802,7 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
 
       {notice && <p className="text-sm text-muted dark:text-mutedDark">{notice}</p>}
 
-      {error && <p className="text-sm text-bad">{error}</p>}
+      {error && <p className="text-sm text-badText">{error}</p>}
 
       {/* Money-Inbox-entry-points rebuild: this is the embedded panel's
           own Review button (reached directly on Overview, not through the

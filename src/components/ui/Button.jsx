@@ -8,10 +8,10 @@
 // and baking any of it in here would risk two utility classes fighting
 // over the same CSS property with no reliable winner.
 const VARIANTS = {
-  primary: 'text-sm font-medium bg-gold text-white hover:bg-gold/90 disabled:opacity-40 transition-colors',
+  primary: 'text-sm font-medium bg-gold text-ink hover:bg-gold/90 disabled:opacity-40 transition-colors',
   secondary: 'text-sm text-muted dark:text-mutedDark hover:bg-paper dark:hover:bg-charcoal transition-colors',
   destructive: 'text-sm font-medium bg-bad text-white hover:bg-bad/90 disabled:opacity-40 transition-colors',
-  text: 'text-gold hover:underline',
+  text: 'text-goldText hover:underline',
 }
 
 export default function Button({ variant = 'primary', type = 'button', className = '', ...props }) {

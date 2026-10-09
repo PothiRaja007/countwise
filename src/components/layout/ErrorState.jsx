@@ -12,7 +12,7 @@ export default function ErrorState({ message, onRetry }) {
 
   return (
     <div className="py-3">
-      <p className="text-sm text-bad">Something went wrong loading this page. Please try again.</p>
+      <p className="text-sm text-badText">Something went wrong loading this page. Please try again.</p>
       {onRetry && (
         <Button variant="text" onClick={onRetry} className="mt-1.5 text-sm">
           Retry

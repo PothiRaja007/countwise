@@ -105,7 +105,7 @@ export default function MoreMenu({ open, onClose, darkMode, onToggleDark }) {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
                   isActive
-                    ? 'bg-gold/10 text-gold font-medium'
+                    ? 'bg-gold/10 text-goldText font-medium'
                     : 'text-muted dark:text-mutedDark hover:bg-paper dark:hover:bg-charcoal'
                 }`
               }
@@ -130,7 +130,7 @@ export default function MoreMenu({ open, onClose, darkMode, onToggleDark }) {
 
         <button
           onClick={signOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-bad hover:bg-paper dark:hover:bg-charcoal transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-badText hover:bg-paper dark:hover:bg-charcoal transition-colors"
         >
           <LogOut size={18} strokeWidth={1.75} />
           Sign out

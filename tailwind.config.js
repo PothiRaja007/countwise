@@ -22,7 +22,12 @@ export default {
         brown: '#4A3720',
         // Semantic
         good: '#3D8F5F',
-        bad: '#C24A42',
+        bad: '#B3403A', // P14: darkened from #C24A42 so white text on it and red text pass 4.5:1
+        // P14: text-only variants. Light mode uses a darker shade so small text passes
+        // WCAG AA (4.5:1); dark mode keeps or lightens the shade. Values live in index.css.
+        goldText: 'rgb(var(--gold-text) / <alpha-value>)',
+        goodText: 'rgb(var(--good-text) / <alpha-value>)',
+        badText: 'rgb(var(--bad-text) / <alpha-value>)',
       },
       fontFamily: {
         display: ['Fraunces', 'serif'],

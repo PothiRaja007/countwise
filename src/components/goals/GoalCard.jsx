@@ -12,9 +12,9 @@ const STATUS_LABELS = {
 
 const STATUS_CLASSES = {
   active: 'text-muted dark:text-mutedDark',
-  completed: 'text-good',
+  completed: 'text-goodText',
   archived: 'text-muted dark:text-mutedDark',
-  overdue: 'text-bad',
+  overdue: 'text-badText',
 }
 
 function formatTargetDate(dateStr) {
@@ -41,7 +41,7 @@ export default function GoalCard({ goal, currentProgress, opportunity, onContrib
           </div>
           <div className="font-mono text-sm text-muted dark:text-mutedDark mt-0.5">
             {formatCurrency(currentProgress)} of {formatCurrency(goal.target_amount)}
-            {overage > 0 && <span className="text-good ml-1">({formatCurrency(overage)} over target)</span>}
+            {overage > 0 && <span className="text-goodText ml-1">({formatCurrency(overage)} over target)</span>}
           </div>
           {goal.target_date && (
             <div className="text-xs text-muted dark:text-mutedDark mt-0.5">Target: {formatTargetDate(goal.target_date)}</div>
@@ -53,7 +53,7 @@ export default function GoalCard({ goal, currentProgress, opportunity, onContrib
             <>
               <button
                 onClick={onContribute}
-                className="p-1.5 text-muted dark:text-mutedDark hover:text-gold"
+                className="p-1.5 text-muted dark:text-mutedDark hover:text-goldText"
                 aria-label="Contribute to goal"
                 title="Contribute"
               >
@@ -61,18 +61,18 @@ export default function GoalCard({ goal, currentProgress, opportunity, onContrib
               </button>
               <button
                 onClick={onWithdraw}
-                className="p-1.5 text-muted dark:text-mutedDark hover:text-gold"
+                className="p-1.5 text-muted dark:text-mutedDark hover:text-goldText"
                 aria-label="Withdraw from goal"
                 title="Withdraw"
               >
                 <ArrowUpFromLine size={16} />
               </button>
-              <button onClick={onEdit} className="p-1.5 text-muted dark:text-mutedDark hover:text-gold" aria-label="Edit goal" title="Edit">
+              <button onClick={onEdit} className="p-1.5 text-muted dark:text-mutedDark hover:text-goldText" aria-label="Edit goal" title="Edit">
                 <Pencil size={16} />
               </button>
               <button
                 onClick={onArchive}
-                className="p-1.5 text-muted dark:text-mutedDark hover:text-bad"
+                className="p-1.5 text-muted dark:text-mutedDark hover:text-badText"
                 aria-label="Archive goal"
                 title="Archive"
               >
@@ -83,7 +83,7 @@ export default function GoalCard({ goal, currentProgress, opportunity, onContrib
           {displayStatus === 'completed' && (
             <button
               onClick={onReuse}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md text-gold hover:bg-paper dark:hover:bg-charcoal"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md text-goldText hover:bg-paper dark:hover:bg-charcoal"
               title="Start a new cycle for this goal"
             >
               <RotateCcw size={14} />
@@ -117,7 +117,7 @@ export default function GoalCard({ goal, currentProgress, opportunity, onContrib
           </div>
           {opportunity.projectedCompletionDate && opportunity.remaining > 0 && (
             <div className="text-muted dark:text-mutedDark">
-              <span className="uppercase tracking-wide text-[10px] mr-1.5 text-gold">Scenario</span>
+              <span className="uppercase tracking-wide text-[10px] mr-1.5 text-goldText">Scenario</span>
               If this pace continues, this goal would be reached around{' '}
               <span className="font-mono text-ink dark:text-offwhite">{formatTargetDate(opportunity.projectedCompletionDate)}</span> —
               an estimate from recent activity, not a guarantee.

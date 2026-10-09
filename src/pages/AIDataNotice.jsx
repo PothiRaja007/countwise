@@ -146,7 +146,7 @@ export default function AIDataNotice() {
             href="https://ai.google.dev/gemini-api/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline hover:text-gold"
+            className="underline hover:text-goldText"
           >
             ai.google.dev/gemini-api/terms
           </a>

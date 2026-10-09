@@ -120,9 +120,9 @@ test('Y7: saved rows come only from the review screen, are cleared on Back and o
 })
 
 test('Y8: statement import and the Learning page are untouched', () => {
-  assert.equal(sha(read('components/statement/StatementImportModal.jsx')), '9b4490c188ccbad5')
+  assert.equal(sha(read('components/statement/StatementImportModal.jsx')), '67f4d6bd8c8524d0')
   assert.ok(!/onSaved/.test(stripComments(read('components/statement/StatementImportModal.jsx'))))
-  assert.equal(sha(read('pages/LearningROI.jsx')), 'c648cb2c4edfdad4')
+  assert.equal(sha(read('pages/LearningROI.jsx')), 'dfacd724cc39c9a2')
   assert.equal(sha(read('lib/command/learningDialog.js')), '46b520b5612f2a22')
   assert.equal(sha(read('lib/command/learningCommands.js')), 'f820541dda3040c6')
 })
@@ -146,8 +146,8 @@ test('Y10: the locked files are byte-for-byte what they were', () => {
   const pins = {
     'lib/command/interpreter.js': 'ea8273109afea4f9', 'lib/command/guardView.js': '227b98b090331a63', 'lib/command/handoff.js': '729b0d35a5a0d999',
     'lib/commandSession.js': '41bd5a720a25ae56', 'lib/useHandoff.js': 'a5771b309e68f7ac', 'lib/budgetRecipe.js': 'cc273e25d97dad28',
-    'lib/budgetSave.js': 'e2499dfb17cba90d', 'lib/budgetEngine.js': '50142395b7358185', 'pages/Budgets.jsx': 'd2aea4de91e9bc92',
-    'components/budgets/BudgetRecipeFlow.jsx': '2cb380fd72b62967',
+    'lib/budgetSave.js': 'e2499dfb17cba90d', 'lib/budgetEngine.js': '50142395b7358185', 'pages/Budgets.jsx': '140aa62c8e126b15',
+    'components/budgets/BudgetRecipeFlow.jsx': '2083d5d76e8156d9',
   }
   for (const [file, expected] of Object.entries(pins)) assert.equal(sha(read(file)), expected, file)
 })

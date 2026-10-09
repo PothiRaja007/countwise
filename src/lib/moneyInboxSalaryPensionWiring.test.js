@@ -156,8 +156,8 @@ test('Z9: the locked files are byte-for-byte what they were', () => {
   const pins = {
     'lib/command/interpreter.js': 'ea8273109afea4f9', 'lib/command/guardView.js': '227b98b090331a63', 'lib/command/handoff.js': '729b0d35a5a0d999',
     'lib/commandSession.js': '41bd5a720a25ae56', 'lib/useHandoff.js': 'a5771b309e68f7ac', 'lib/command/queries.js': 'bbcecab7991be354',
-    'components/money-inbox/QueryResultDialog.jsx': '83e29d3898e22a6b', 'components/money-inbox/ReviewDrawer.jsx': 'bd2bb99ef98ea9c2',
-    'pages/Salary.jsx': 'c9f577319c072f9b', 'pages/PFPension.jsx': 'eaabd6e8ae5708cc', 'lib/salaryEngine.js': '2befabe0339368b0',
+    'components/money-inbox/QueryResultDialog.jsx': '403975eb4aa89db4', 'components/money-inbox/ReviewDrawer.jsx': 'bf1359b4811e4307',
+    'pages/Salary.jsx': '410d0e32145c8aec', 'pages/PFPension.jsx': '87fb6e304691f46e', 'lib/salaryEngine.js': '2befabe0339368b0',
     'lib/pfEngine.js': 'dba5c9883be3d1ce', 'lib/financialRules.js': '6fb0dcf6a6eb633e', 'lib/command/pendingAction.js': 'a75edc5305f97862',
     'lib/command/commandContext.js': 'efe5ddb22ad5c1f2', 'lib/command/budgetCommands.js': '99c5763aeef33cea', 'lib/command/goalCommands.js': '9715e0be9f299941',
     'lib/command/learningCommands.js': 'f820541dda3040c6', 'lib/command/learningOffer.js': '2cf2e0202d58c306',

@@ -296,7 +296,7 @@ export default function BudgetRecipeFlow({ userId, incomeType, categories, categ
               {notice.map((line) => <p key={line}>{line}</p>)}
             </div>
           )}
-          {buildError && <p className="text-sm text-bad">{buildError}</p>}
+          {buildError && <p className="text-sm text-badText">{buildError}</p>}
           <Input
             as="textarea"
             autoFocus
@@ -413,8 +413,8 @@ function CuratedStep({
                     ))}
                   </Select>
                 )}
-                {status === 'duplicate' && <p className="text-xs text-bad mt-1">Already budgeted this month.</p>}
-                {status === 'error' && <p className="text-xs text-bad mt-1">Couldn't save. Try again.</p>}
+                {status === 'duplicate' && <p className="text-xs text-badText mt-1">Already budgeted this month.</p>}
+                {status === 'error' && <p className="text-xs text-badText mt-1">Couldn't save. Try again.</p>}
               </div>
               <div className="flex items-center gap-1 font-mono text-sm shrink-0">
                 <span className="text-muted dark:text-mutedDark">₹</span>
@@ -501,8 +501,8 @@ function MissingStep({ rows, selected, setSelected, amountText, setAmountText, r
                   <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${categoryPillClasses(row.categoryName)}`}>{row.categoryName}</span>
                   <ValueBadge kind="suggested" label={MISSING_SOURCE_LABEL[row.source]} />
                 </div>
-                {status === 'duplicate' && <p className="text-xs text-bad mt-1">Already budgeted this month.</p>}
-                {status === 'error' && <p className="text-xs text-bad mt-1">Couldn't save. Try again.</p>}
+                {status === 'duplicate' && <p className="text-xs text-badText mt-1">Already budgeted this month.</p>}
+                {status === 'error' && <p className="text-xs text-badText mt-1">Couldn't save. Try again.</p>}
               </div>
               <div className="flex items-center gap-1 font-mono text-sm shrink-0">
                 <span className="text-muted dark:text-mutedDark">₹</span>

@@ -126,7 +126,7 @@ test('X6: the Budgets page\'s own delete, create-save and edit-save code, helper
   assert.equal(sha(create), '1fb0779f1663d7d5')
   assert.equal(sha(edit), '65a94872cf09e263')
   assert.equal(sha(between(page, 'function monthRange(monthValue) {', '\nexport default function Budgets()')), 'ba35f7d1ed35ab94')
-  assert.equal(sha(between(page, 'function BudgetRow(', '\nfunction BudgetFormModal(')), 'bf2ea4e94940ad4e')
+  assert.equal(sha(between(page, 'function BudgetRow(', '\nfunction BudgetFormModal(')), '5fe262ff1b7e7941')
   assert.equal(sha(page.slice(page.indexOf('function ConfirmDeleteModal('))), '088a64aa43418d48')
   assert.equal((pageCode.match(/saveBudgetRow\(/g) || []).length, 2, 'the page still saves in exactly two places')
   assert.equal((pageCode.match(/supabase\.from\('budgets'\)\.delete\(\)/g) || []).length, 1)
@@ -183,7 +183,7 @@ test('X11: locked files are byte-for-byte what they were; ReviewDrawer and the t
   const pins = {
     'lib/budgetRecipe.js': 'cc273e25d97dad28', 'lib/budgetSave.js': 'e2499dfb17cba90d', 'lib/budgetEngine.js': '50142395b7358185',
     'lib/command/interpreter.js': 'ea8273109afea4f9', 'lib/command/handoff.js': '729b0d35a5a0d999', 'lib/commandSession.js': '41bd5a720a25ae56',
-    'lib/useHandoff.js': 'a5771b309e68f7ac', 'components/money-inbox/ReviewDrawer.jsx': 'bd2bb99ef98ea9c2' /* P8b: one optional onSaved prop, called after a real save */,
+    'lib/useHandoff.js': 'a5771b309e68f7ac', 'components/money-inbox/ReviewDrawer.jsx': 'bf1359b4811e4307' /* P8b: one optional onSaved prop, called after a real save */,
   }
   for (const [file, expected] of Object.entries(pins)) assert.equal(sha(read(file)), expected, file)
   const START = 'const candidates = buildReviewCandidates(text, {'

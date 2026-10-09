@@ -153,8 +153,8 @@ export default function NotificationsSection() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-bad">{error}</p>}
-      {saved && !dirty && <p className="text-sm text-good">Saved.</p>}
+      {error && <p className="text-sm text-badText">{error}</p>}
+      {saved && !dirty && <p className="text-sm text-goodText">Saved.</p>}
 
       <Button
         onClick={handleSave}

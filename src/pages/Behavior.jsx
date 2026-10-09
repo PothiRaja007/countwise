@@ -32,13 +32,13 @@ function periodRange(days) {
 function Stars({ value, large = false }) {
   const filled = Math.round(value)
   return (
-    <div className={`flex items-center gap-1 ${large ? 'gap-1.5' : ''}`} aria-label={`${value} out of 5 stars`}>
+    <div className={`flex items-center gap-1 ${large ? 'gap-1.5' : ''}`} role="img" aria-label={`${value} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
           size={large ? 28 : 16}
           strokeWidth={1.7}
-          className={star <= filled ? 'fill-gold text-gold' : 'text-line dark:text-lineDark'}
+          className={star <= filled ? 'fill-gold text-goldText' : 'text-line dark:text-lineDark'}
         />
       ))}
     </div>
@@ -182,7 +182,7 @@ export default function Behavior() {
                 onClick={() => setPeriodKey(item.key)}
                 className={`px-3 py-1.5 text-xs rounded transition-colors ${
                   periodKey === item.key
-                    ? 'bg-gold/10 text-gold font-medium'
+                    ? 'bg-gold/10 text-goldText font-medium'
                     : 'text-muted dark:text-mutedDark hover:bg-surface dark:hover:bg-charcoalSurface'
                 }`}
               >
@@ -237,7 +237,7 @@ export default function Behavior() {
             <div className="mt-4 border-y border-line dark:border-lineDark">
               {score.flags.length === 0 ? (
                 <div className="py-7 flex items-start gap-3">
-                  <Info size={17} className="text-gold mt-0.5 shrink-0" />
+                  <Info size={17} className="text-goldText mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm">No notable patterns flagged for this period.</p>
                     <p className="text-xs text-muted dark:text-mutedDark mt-1">
@@ -274,7 +274,7 @@ export default function Behavior() {
 }
 
 function Metric({ label, value, tone }) {
-  const toneClass = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-bad' : 'text-ink dark:text-offwhite'
+  const toneClass = tone === 'good' ? 'text-goodText' : tone === 'bad' ? 'text-badText' : 'text-ink dark:text-offwhite'
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wide text-muted dark:text-mutedDark">{label}</p>

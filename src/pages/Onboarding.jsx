@@ -91,7 +91,7 @@ export default function Onboarding() {
                 onClick={() => setEmployeeSubtype(opt.value)}
                 className={`py-4 rounded-xl border text-sm font-medium transition-colors ${
                   employeeSubtype === opt.value
-                    ? 'border-gold bg-gold/10 text-gold'
+                    ? 'border-gold bg-gold/10 text-goldText'
                     : 'border-line dark:border-lineDark bg-surface dark:bg-charcoalSurface text-ink dark:text-offwhite hover:border-gold/50'
                 }`}
               >
@@ -99,7 +99,7 @@ export default function Onboarding() {
               </button>
             ))}
           </div>
-          {error && <p className="text-sm text-bad mb-3">{error}</p>}
+          {error && <p className="text-sm text-badText mb-3">{error}</p>}
           <Button
             onClick={handleEmployeeSubtypeContinue}
             disabled={!employeeSubtype || loading}
@@ -128,7 +128,7 @@ export default function Onboarding() {
               onClick={() => setIncomeType(opt)}
               className={`py-4 rounded-xl border text-sm capitalize font-medium transition-colors ${
                 incomeType === opt
-                  ? 'border-gold bg-gold/10 text-gold'
+                  ? 'border-gold bg-gold/10 text-goldText'
                   : 'border-line dark:border-lineDark bg-surface dark:bg-charcoalSurface text-ink dark:text-offwhite hover:border-gold/50'
               }`}
             >
@@ -136,7 +136,7 @@ export default function Onboarding() {
             </button>
           ))}
         </div>
-        {error && <p className="text-sm text-bad mb-3">{error}</p>}
+        {error && <p className="text-sm text-badText mb-3">{error}</p>}
         <Button
           onClick={handleIncomeTypeContinue}
           disabled={!incomeType || loading}

@@ -9,7 +9,7 @@ export default function AiDisclosure({ children, className = '' }) {
   return (
     <p className={`text-[11px] text-muted dark:text-mutedDark mt-1 max-w-xl leading-4 ${className}`.trim()}>
       {children} Read the{' '}
-      <a href="/ai-data-notice" target="_blank" rel="noopener noreferrer" className="underline hover:text-gold">
+      <a href="/ai-data-notice" target="_blank" rel="noopener noreferrer" className="underline hover:text-goldText">
         AI &amp; Data Processing Notice
       </a>{' '}
       first.

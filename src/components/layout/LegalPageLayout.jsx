@@ -24,9 +24,9 @@ export default function LegalPageLayout({ title, lastUpdated, children }) {
         <div className="flex items-center justify-between mb-8">
           <div className="font-display text-lg font-semibold tracking-tight">
             <span className="text-ink dark:text-offwhite">Count</span>
-            <span className="text-gold">Wise</span>
+            <span className="text-goldText">Wise</span>
           </div>
-          <Link to="/" className="text-sm text-muted dark:text-mutedDark hover:text-gold transition-colors">
+          <Link to="/" className="text-sm text-muted dark:text-mutedDark hover:text-goldText transition-colors">
             {session ? '← Back to CountWise' : '← Back to Sign In'}
           </Link>
         </div>
@@ -75,7 +75,7 @@ export function LegalSection({ heading, children }) {
 export function FutureNote({ children }) {
   return (
     <div className="border border-gold/40 bg-gold/5 rounded-lg px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-gold mb-1">Forward-looking note</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-goldText mb-1">Forward-looking note</p>
       <div className="text-sm leading-relaxed text-ink dark:text-offwhite space-y-2">{children}</div>
     </div>
   )

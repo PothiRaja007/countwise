@@ -131,5 +131,5 @@ Snapshot table for future performance optimization. **Not read from in v1** — 
 ## Notes
 - No `credit_cards` table in v1 — permanently excluded, not deferred to v2.
 - No `currency` column anywhere in v1 — single implicit currency.
-- No LLM/AI API anywhere — all Money Inbox parsing is rule-based/deterministic (`src/lib/dateParser.js`, `src/lib/categorization.js`).
+- Money Inbox parsing is rule-based and deterministic (`src/lib/dateParser.js`, `src/lib/categorization.js`) and works with no AI. The app also has a few optional, disclosed Gemini features (for example CTC document extraction, bank-statement help, the financial assist narration and the admin rule assistant), called through Supabase edge functions. AI only suggests; nothing is written to financial data without the user reviewing and confirming it. See the in-app AI notice page.
 - Behavior score computation and flag detection run client-side against `transactions` + `goals` + `goal_contributions` + `learning_items`; only the result would be persisted to `behavior_scores`/`behavior_flags` (not yet wired up).

@@ -8,13 +8,13 @@ export default function Footer() {
   return (
     <footer className="mt-auto pt-6 pb-6 px-6 sm:px-8">
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-center text-xs text-muted dark:text-mutedDark">
-        <Link to="/privacy" className="hover:text-gold transition-colors">
+        <Link to="/privacy" className="hover:text-goldText transition-colors">
           Privacy Policy
         </Link>
-        <Link to="/terms" className="hover:text-gold transition-colors">
+        <Link to="/terms" className="hover:text-goldText transition-colors">
           Terms &amp; Conditions
         </Link>
-        <Link to="/ai-data-notice" className="hover:text-gold transition-colors">
+        <Link to="/ai-data-notice" className="hover:text-goldText transition-colors">
           AI &amp; Data Processing
         </Link>
       </div>

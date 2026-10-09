@@ -63,7 +63,7 @@ export default function AccountDeletionSection() {
   return (
     <div className="space-y-4 max-w-lg">
       <div className="flex gap-2.5 p-3 rounded-md border border-bad/30 bg-bad/5">
-        <AlertTriangle size={16} className="text-bad shrink-0 mt-0.5" />
+        <AlertTriangle size={16} className="text-badText shrink-0 mt-0.5" />
         <div className="text-sm text-ink dark:text-offwhite">
           <p className="font-medium">Delete your account</p>
           <p className="text-muted dark:text-mutedDark mt-1">
@@ -91,7 +91,7 @@ export default function AccountDeletionSection() {
         />
       </div>
 
-      {error && <p className="text-sm text-bad">{error}</p>}
+      {error && <p className="text-sm text-badText">{error}</p>}
 
       <Button
         variant="destructive"

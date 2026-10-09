@@ -249,7 +249,7 @@ export default function Budgets() {
       />
 
       {commandMessage && (
-        <div className="flex items-center justify-between gap-3 text-sm text-bad">
+        <div className="flex items-center justify-between gap-3 text-sm text-badText">
           <span>{commandMessage}</span>
           <button onClick={() => setCommandMessage(null)} aria-label="Dismiss message" className="shrink-0">
             <X size={14} />
@@ -401,7 +401,7 @@ function BudgetRow({ budget, categoryName, transactions, onEdit, onDelete }) {
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full truncate ${categoryPillClasses(categoryName)}`}>
             {categoryName}
           </span>
-          {over && <span className="text-xs text-bad font-medium shrink-0">Over budget</span>}
+          {over && <span className="text-xs text-badText font-medium shrink-0">Over budget</span>}
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
@@ -422,7 +422,7 @@ function BudgetRow({ budget, categoryName, transactions, onEdit, onDelete }) {
         <span className="text-muted dark:text-mutedDark">
           {formatCurrency(spent)} of {formatCurrency(budget.amount)}
         </span>
-        <span className={over ? 'text-bad' : 'text-muted dark:text-mutedDark'}>
+        <span className={over ? 'text-badText' : 'text-muted dark:text-mutedDark'}>
           {over ? `${formatCurrency(Math.abs(remaining))} over` : `${formatCurrency(remaining)} left`}
         </span>
       </div>
@@ -533,7 +533,7 @@ function BudgetFormModal({
             />
           </div>
 
-          {formError && <p className="text-xs text-bad">{formError}</p>}
+          {formError && <p className="text-xs text-badText">{formError}</p>}
         </div>
 
         <div className="flex justify-end gap-2">

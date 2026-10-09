@@ -35,7 +35,7 @@ export default function QueryResultDialog({ answer, onAskAgain, onClose }) {
 
       {answer.seeMore && (
         <p className="text-sm">
-          <Link to={answer.seeMore.route} onClick={onClose} className="text-gold hover:underline">
+          <Link to={answer.seeMore.route} onClick={onClose} className="text-goldText hover:underline">
             {answer.seeMore.label}
           </Link>
         </p>

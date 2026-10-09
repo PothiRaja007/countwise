@@ -72,6 +72,17 @@ npm run dev
 
 You'll need your own Supabase project — see `supabase/schema.sql` for the full database schema and RLS policies.
 
+## Security notes
+
+- The web app uses only the Supabase **anon** key, which is public by design: it ships inside every browser bundle. Access is controlled by Row-Level Security, which is on for every table, so each signed-in user can only reach their own rows.
+- Early commits of this public repository contained a `.env` file and a built `dist/` bundle holding the project URL and that anon key. Both were removed from tracking later. A scan of the full history found no service-role key, Gemini key or other secret; the one JWT found has the `anon` role. History was left unchanged on purpose. The service-role key and the Gemini key live only in Supabase secrets and are never committed.
+
+## Known limitations
+
+- **One-income parsing:** a sentence such as "Received my salary, rent 4000 sbi" is read as a single income of 4000, not as two entries. The review screen always shows the row before anything is saved, so nothing is recorded wrongly without the user seeing it. The parser is locked by tests; this is documented, not fixed.
+- **Duplicate protection is on the screen only:** save buttons lock while a save is running, but the database has no uniqueness rule for goals, transactions or learning items.
+- **Accessibility:** automated checks (axe-core) were run, and keyboard and screen-reader walkthroughs are still manual sign-off items.
+
 ## What's next
 
 CountWise's next planned phase (V1.3) introduces AI assistance for two specific things: interpreting uploaded CTC/offer-letter documents, and eventually a fallback parser for Money Inbox inputs the deterministic parser can't handle. Both are designed around the same non-negotiable rule the rest of the app already follows: AI can suggest, but nothing gets written to your financial data without you reviewing and confirming it first.

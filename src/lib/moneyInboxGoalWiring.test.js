@@ -138,9 +138,12 @@ test('T7: ContributeModal gives today\'s defaults without the new props, and its
   assert.ok(/initialAccountId !== undefined \? initialAccountId : \(accounts\[0\]\?\.id \|\| ''\)/.test(modalCode), 'without the prop the first account is pre-selected, as today')
   assert.ok(/initialAmount !== undefined \? String\(initialAmount\) : ''/.test(modalCode), 'without the prop the amount is empty, as today')
   assert.ok(/onError, initialAmount, initialAccountId, notice \}\) \{/.test(modalCode), 'exactly the three optional props')
-  const save = between(modal, 'const handleSave = async () => {', '    onSaved()\n  }')
-  assert.equal(sha(save), '3bbf1b5d1b6965a4')
-  assert.equal(save.length, 1207)
+  // P14 (N-6): the save body moved under a one-click lock. Its first line was renamed (handleSave -> saveOnce);
+  // every line after it is byte-for-byte what it was (this is the hash the original whole-function pin contained).
+  const save = between(modal, 'const saveOnce = async () => {', '    onSaved()\n  }')
+  assert.equal(sha(save.split('\n').slice(1).join('\n')), '94720f26b345c61a')
+  assert.equal(save.length, 1205)
+  assert.ok(/const handleSave = async \(\) => \{\s*if \(inFlight\.current\) return\s*inFlight\.current = true\s*try \{\s*await saveOnce\(\)\s*\} finally \{\s*inFlight\.current = false/.test(modalCode), 'the save runs under the one-click lock')
   assert.equal((modalCode.match(/\.insert\(/g) || []).length, 1, 'one insert')
   assert.ok(/supabase\.from\('goal_contributions'\)\.insert\(/.test(modalCode))
   assert.equal((modalCode.match(/\.update\(/g) || []).length, 1, 'one update: the goal\'s status at the target')

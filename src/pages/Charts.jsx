@@ -74,7 +74,7 @@ function Section({ title, description, children }) {
 }
 
 function Metric({ label, value, tone = 'neutral', detail }) {
-  const valueClass = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-bad' : 'text-ink dark:text-offwhite'
+  const valueClass = tone === 'good' ? 'text-goodText' : tone === 'bad' ? 'text-badText' : 'text-ink dark:text-offwhite'
   return (
     <div className="py-4 sm:px-5 first:sm:pl-0 last:sm:pr-0">
       <div className="text-xs font-medium uppercase tracking-wide text-muted dark:text-mutedDark mb-1.5">{label}</div>
@@ -424,7 +424,7 @@ function ComparisonMetric({ label, currentValue, previousValue, percentage, expe
     if (net) useful = positive
     if (percentage === 0) useful = null
 
-    changeTone = useful === true ? 'text-good' : useful === false ? 'text-bad' : 'text-muted dark:text-mutedDark'
+    changeTone = useful === true ? 'text-goodText' : useful === false ? 'text-badText' : 'text-muted dark:text-mutedDark'
     changeLabel = `${percentage > 0 ? '+' : ''}${percentage.toFixed(1)}% vs previous`
   }
 

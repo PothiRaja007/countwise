@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* P14 — text colours that meet WCAG AA contrast (4.5:1) in each mode.
+   Fills (bg-gold, bg-good, bg-bad) keep their brand colours. */
+:root {
+  --gold-text: 116 83 15;   /* #74530F */
+  --good-text: 46 117 73;   /* #2E7549 */
+  --bad-text: 179 64 58;    /* #B3403A */
+}
+.dark {
+  --gold-text: 200 157 75;  /* #C89D4B */
+  --good-text: 79 168 120;  /* #4FA878 */
+  --bad-text: 232 115 106;  /* #E8736A */
+}
+
 /* Amounts and dates use tabular figures so columns of numbers line up,
    the way a real ledger or passbook does. */
 .font-mono {

@@ -232,7 +232,7 @@ function ExplainAction({ totals, gross, takeHome }) {
         </>
       )}
 
-      {error && <p className="text-xs text-bad mt-1.5">{error}</p>}
+      {error && <p className="text-xs text-badText mt-1.5">{error}</p>}
 
       {/* Deliberately NOT a ValueBadge and NOT the gold dashed-border
           treatment used for calculated/estimated/suggested values — an
@@ -322,7 +322,7 @@ function ComponentEntryForm({ onAdd }) {
         </div>
       </div>
 
-      {formError && <p className="text-xs text-bad">{formError}</p>}
+      {formError && <p className="text-xs text-badText">{formError}</p>}
 
       <Button variant="text" onClick={handleAdd} className="flex items-center gap-1.5 text-sm font-medium">
         <Plus size={14} />
@@ -599,7 +599,7 @@ export default function Salary() {
         <div className="space-y-6">
           <div className="rounded-lg border border-line dark:border-lineDark p-4 flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
-              <Wallet size={16} className="text-gold shrink-0" />
+              <Wallet size={16} className="text-goldText shrink-0" />
               <div className="min-w-0">
                 <p className="text-sm font-medium">I received this month's salary</p>
                 <p className="text-xs text-muted dark:text-mutedDark mt-0.5">
@@ -640,7 +640,7 @@ export default function Salary() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium truncate">{s.label}</p>
                       {s.is_active && (
-                        <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-gold/40 text-gold shrink-0">
+                        <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-gold/40 text-goldText shrink-0">
                           <Star size={11} className="fill-gold" />
                           Active
                         </span>
@@ -705,7 +705,7 @@ export default function Salary() {
                       <button
                         onClick={() => handleRemoveDraftComponent(c.id)}
                         aria-label={`Remove ${c.name}`}
-                        className="text-muted dark:text-mutedDark hover:text-bad"
+                        className="text-muted dark:text-mutedDark hover:text-badText"
                       >
                         <X size={16} />
                       </button>
@@ -720,7 +720,7 @@ export default function Salary() {
 
           <SalaryBreakdown components={draftComponents} />
 
-          {saveError && <p className="text-sm text-bad">{saveError}</p>}
+          {saveError && <p className="text-sm text-badText">{saveError}</p>}
 
           <div className="flex items-center gap-2 pt-2">
             <button
@@ -750,7 +750,7 @@ export default function Salary() {
           <div className="flex items-center gap-2">
             <h2 className="font-display text-xl font-semibold tracking-tight">{viewingStructure.label}</h2>
             {viewingStructure.is_active && (
-              <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-gold/40 text-gold">
+              <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-gold/40 text-goldText">
                 <Star size={11} className="fill-gold" />
                 Active
               </span>

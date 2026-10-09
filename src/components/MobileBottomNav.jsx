@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { LayoutGrid, List, Target, MoreHorizontal } from 'lucide-react'
 import MoreMenu from './MoreMenu.jsx'
+import { justClosedModal } from '../lib/modalGuard.js'
 
 const itemClasses = ({ isActive }) =>
   `flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[11px] transition-colors ${
-    isActive ? 'text-gold font-medium' : 'text-muted dark:text-mutedDark'
+    isActive ? 'text-goldText font-medium' : 'text-muted dark:text-mutedDark'
   }`
 
 // "More" covers routes that don't have their own bottom-bar slot.
@@ -59,9 +60,10 @@ export default function MobileBottomNav({ darkMode, onToggleDark }) {
           Goals
         </NavLink>
         <button
-          onClick={() => setMoreOpen(true)}
+          // O-1: ignore a stray second tap that arrives just after a dialog closed.
+          onClick={() => { if (!justClosedModal()) setMoreOpen(true) }}
           className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[11px] transition-colors ${
-            moreActive ? 'text-gold font-medium' : 'text-muted dark:text-mutedDark'
+            moreActive ? 'text-goldText font-medium' : 'text-muted dark:text-mutedDark'
           }`}
         >
           <MoreHorizontal size={20} strokeWidth={1.75} />

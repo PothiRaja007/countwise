@@ -98,7 +98,7 @@ export default function ResetPassword() {
               {PASSWORD_RULE_LABELS.map((rule) => {
                 const met = !passwordCheck.failures.includes(rule)
                 return (
-                  <li key={rule} className={`text-xs ${met ? 'text-good' : 'text-muted dark:text-mutedDark'}`}>
+                  <li key={rule} className={`text-xs ${met ? 'text-goodText' : 'text-muted dark:text-mutedDark'}`}>
                     {met ? '✓' : '·'} {rule}
                   </li>
                 )
@@ -117,7 +117,7 @@ export default function ResetPassword() {
             />
           </div>
 
-          {error && <p className="text-sm text-bad">{error}</p>}
+          {error && <p className="text-sm text-badText">{error}</p>}
 
           <Button
             type="submit"

@@ -125,7 +125,7 @@ test('mergeByCategory: different categories stay on separate rows', () => {
 
 // ---- suggestFromHistory: exclusion + rounding ----
 test('suggestFromHistory: excludes categories already covered elsewhere', () => {
-  const reference = new Date('2026-09-01')
+  const reference = new Date(2026, 8, 1)
   const transactions = [
     { category_id: FOOD_ID, type: 'expense', amount: 1000, transaction_date: '2026-08-05' },
     { category_id: FOOD_ID, type: 'expense', amount: 1200, transaction_date: '2026-07-05' },
@@ -140,7 +140,7 @@ test('suggestFromHistory: excludes categories already covered elsewhere', () => 
 })
 
 test('suggestFromHistory: rounds the suggested amount to the nearest ₹50 (documented, deterministic)', () => {
-  const reference = new Date('2026-09-01')
+  const reference = new Date(2026, 8, 1)
   // 500, 700, 600 across 3 months -> average 600 exactly, already a multiple of 50
   const transactions = [
     { category_id: FOOD_ID, type: 'expense', amount: 500, transaction_date: '2026-08-05' },
@@ -152,7 +152,7 @@ test('suggestFromHistory: rounds the suggested amount to the nearest ₹50 (docu
 })
 
 test('suggestFromHistory: a non-round average rounds to the nearest ₹50', () => {
-  const reference = new Date('2026-09-01')
+  const reference = new Date(2026, 8, 1)
   // average = (613 + 612) / 2 = 612.5 -> nearest 50 -> 600
   // (12.5 away from 600 vs 37.5 away from 650)
   const transactions = [
@@ -164,14 +164,14 @@ test('suggestFromHistory: a non-round average rounds to the nearest ₹50', () =
 })
 
 test('suggestFromHistory: a category appearing in only 1 of 3 months is not suggested', () => {
-  const reference = new Date('2026-09-01')
+  const reference = new Date(2026, 8, 1)
   const transactions = [{ category_id: FOOD_ID, type: 'expense', amount: 1000, transaction_date: '2026-08-05' }]
   const candidates = suggestFromHistory(transactions, [], reference)
   assert.strictEqual(candidates.length, 0)
 })
 
 test('suggestFromHistory: income and transfer rows never contribute', () => {
-  const reference = new Date('2026-09-01')
+  const reference = new Date(2026, 8, 1)
   const transactions = [
     { category_id: FOOD_ID, type: 'expense', amount: 1000, transaction_date: '2026-08-05' },
     { category_id: FOOD_ID, type: 'income', amount: 9000, transaction_date: '2026-08-06' },
@@ -183,7 +183,7 @@ test('suggestFromHistory: income and transfer rows never contribute', () => {
 })
 
 test('suggestFromHistory: no evidence means no suggestion at all (never fabricated)', () => {
-  assert.deepStrictEqual(suggestFromHistory([], [], new Date('2026-09-01')), [])
+  assert.deepStrictEqual(suggestFromHistory([], [], new Date(2026, 8, 1)), [])
 })
 
 // ---- suggestFromProfile: never carries a confirmed amount, matches real categories ----

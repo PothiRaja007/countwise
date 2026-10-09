@@ -127,7 +127,7 @@ export default function DataExportSection() {
         Download your data as CSV. Each file only contains your own rows.
       </p>
 
-      {error && <p className="text-sm text-bad">{error}</p>}
+      {error && <p className="text-sm text-badText">{error}</p>}
 
       <div className="divide-y divide-line dark:divide-lineDark border-t border-b border-line dark:border-lineDark">
         {EXPORTS.map((item) => (

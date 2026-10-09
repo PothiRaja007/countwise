@@ -238,7 +238,7 @@ export default function Calendar() {
                     onClick={() => setSelectedDate(dateStr)}
                     className={`relative border-r border-b border-line dark:border-lineDark aspect-square flex flex-col items-center justify-center text-sm transition-colors ${
                       isSelected
-                        ? 'bg-gold/10 text-gold font-medium'
+                        ? 'bg-gold/10 text-goldText font-medium'
                         : isToday
                         ? 'text-ink dark:text-offwhite font-medium'
                         : 'text-ink dark:text-offwhite hover:bg-surface dark:hover:bg-charcoalSurface'
@@ -312,7 +312,7 @@ export default function Calendar() {
 function CalendarTransactionRow({ transaction, categoryName, accountName, toAccountName }) {
   const isTransfer = transaction.type === 'transfer'
   const isIncome = transaction.type === 'income'
-  const amountClass = isTransfer ? 'text-ink dark:text-offwhite' : isIncome ? 'text-good' : 'text-bad'
+  const amountClass = isTransfer ? 'text-ink dark:text-offwhite' : isIncome ? 'text-goodText' : 'text-badText'
   const sign = isTransfer ? '' : isIncome ? '+' : '-'
   const pillLabel = isTransfer ? 'Transfer' : categoryName || (isIncome ? 'Income' : 'Expense')
 

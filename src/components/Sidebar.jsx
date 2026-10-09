@@ -100,7 +100,7 @@ const INSTALL_GROUP = {
 const navLinkClasses = ({ isActive }) =>
   `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
     isActive
-      ? 'bg-gold/10 text-gold font-medium border-l-2 border-gold -ml-px pl-[11px]'
+      ? 'bg-gold/10 text-goldText font-medium border-l-2 border-gold -ml-px pl-[11px]'
       : 'text-muted dark:text-mutedDark hover:bg-paper dark:hover:bg-charcoal'
   }`
 
@@ -147,7 +147,7 @@ export default function Sidebar({ darkMode, onToggleDark }) {
         </div>
         <div className="font-display text-lg font-semibold tracking-tight leading-none">
           <span className="text-ink dark:text-offwhite">Count</span>
-          <span className="text-gold">Wise</span>
+          <span className="text-goldText">Wise</span>
         </div>
       </div>
 

@@ -136,7 +136,7 @@ test('W8: Learning keeps no memory (decision 6) and imports only the hook and th
 })
 
 test('W9: the transaction path is untouched; ReviewDrawer changed only by the P8b onSaved prop', () => {
-  assert.equal(sha(read('components/money-inbox/ReviewDrawer.jsx')), 'bd2bb99ef98ea9c2')
+  assert.equal(sha(read('components/money-inbox/ReviewDrawer.jsx')), 'bf1359b4811e4307')
   assert.ok(!/RECORD_LEARNING_PAYMENT/.test(code + pageCode), 'the declared-but-unrouted intent is still not used')
   assert.ok(!/learningOffer|detectLearningPayment/.test(pageCode), 'the Learning page knows nothing of the offer')
   const START = 'const candidates = buildReviewCandidates(text, {'

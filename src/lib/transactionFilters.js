@@ -73,6 +73,9 @@ export function groupByDate(transactions) {
 export function dateGroupLabel(isoDate, todayISO, yesterdayISO) {
   if (isoDate === todayISO) return 'Today'
   if (isoDate === yesterdayISO) return 'Yesterday'
-  const d = new Date(isoDate)
+  // A date-only string ('2026-08-01') is read as UTC midnight by new Date(),
+  // which shows the previous day west of UTC. Build a local date instead.
+  const [y, m, day] = isoDate.split('-').map(Number)
+  const d = new Date(y, m - 1, day)
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }

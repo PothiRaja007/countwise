@@ -33,7 +33,7 @@ export default function InstallInApp({ initialOs }) {
         </p>
 
         {standalone ? (
-          <p className="mt-8 text-sm text-good">You are already using the installed CountWise app.</p>
+          <p className="mt-8 text-sm text-goodText">You are already using the installed CountWise app.</p>
         ) : (
           <>
             {detected === 'other' && (
@@ -53,7 +53,7 @@ export default function InstallInApp({ initialOs }) {
                     onClick={() => setSelectedId(p.id)}
                     className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
                       active
-                        ? 'border-gold bg-gold/10 text-gold font-medium'
+                        ? 'border-gold bg-gold/10 text-goldText font-medium'
                         : 'border-line dark:border-lineDark text-muted dark:text-mutedDark hover:bg-surface dark:hover:bg-charcoalSurface'
                     }`}
                   >

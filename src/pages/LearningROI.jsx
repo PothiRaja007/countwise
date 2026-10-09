@@ -31,9 +31,9 @@ const STATUS_LABELS = {
 
 const STATUS_CLASSES = {
   planned: 'text-muted dark:text-mutedDark',
-  in_progress: 'text-gold',
-  completed: 'text-good',
-  dropped: 'text-bad',
+  in_progress: 'text-goldText',
+  completed: 'text-goodText',
+  dropped: 'text-badText',
 }
 
 // Border/outline/focus:border-gold now come from Input.jsx/Select.jsx's
@@ -296,7 +296,7 @@ export default function Learning() {
         )}
 
         {commandMessage && (
-          <div className="mt-5 flex items-center justify-between gap-3 text-sm text-bad">
+          <div className="mt-5 flex items-center justify-between gap-3 text-sm text-badText">
             <span>{commandMessage}</span>
             <button onClick={() => setCommandMessage(null)} aria-label="Dismiss message" className="shrink-0">
               <X size={14} />
@@ -311,7 +311,8 @@ export default function Learning() {
           <SummaryCell label="Average progress" value={`${summary.averageProgress}%`} last />
         </div>
 
-        <div className="mt-8 flex gap-5 overflow-x-auto border-b border-line dark:border-lineDark" role="tablist" aria-label="Learning item status">
+        {/* w-0 min-w-full: the tab strip scrolls inside its own box instead of widening the whole page on a phone. */}
+        <div className="mt-8 flex gap-5 w-0 min-w-full overflow-x-auto border-b border-line dark:border-lineDark" role="tablist" aria-label="Learning item status">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -405,7 +406,7 @@ function LearningRow({ item, onEdit, onDelete }) {
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted dark:text-mutedDark">
           <span className="font-mono">{formatCurrency(item.cost)}</span>
           {item.target_date && (
-            <span className={`inline-flex items-center gap-1 ${overdue ? 'text-bad' : ''}`}>
+            <span className={`inline-flex items-center gap-1 ${overdue ? 'text-badText' : ''}`}>
               <CalendarDays size={13} />
               {overdue ? 'Target date passed · ' : 'Target · '}{formatDate(item.target_date)}
             </span>
@@ -426,7 +427,7 @@ function LearningRow({ item, onEdit, onDelete }) {
       <div className="flex items-center gap-1 justify-end">
         <button
           onClick={onEdit}
-          className="p-2 text-muted dark:text-mutedDark hover:text-gold transition-colors"
+          className="p-2 text-muted dark:text-mutedDark hover:text-goldText transition-colors"
           aria-label={`Edit ${item.name}`}
           title="Edit"
         >
@@ -434,7 +435,7 @@ function LearningRow({ item, onEdit, onDelete }) {
         </button>
         <button
           onClick={onDelete}
-          className="p-2 text-muted dark:text-mutedDark hover:text-bad transition-colors"
+          className="p-2 text-muted dark:text-mutedDark hover:text-badText transition-colors"
           aria-label={`Delete ${item.name}`}
           title="Delete"
         >
@@ -512,7 +513,7 @@ function LearningFormModal({ item, onClose, onSave, initialValues = null, notice
             </div>
           )}
 
-          {formError && <p className="text-sm text-bad">{formError}</p>}
+          {formError && <p className="text-sm text-badText">{formError}</p>}
 
           <Field label="Name" required>
             <Input
@@ -586,7 +587,7 @@ function LearningFormModal({ item, onClose, onSave, initialValues = null, notice
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 rounded-lg bg-gold text-white text-sm font-medium hover:bg-gold/90 disabled:opacity-60"
+              className="px-4 py-2 rounded-lg bg-gold text-ink text-sm font-medium hover:bg-gold/90 disabled:opacity-60"
             >
               {saving ? 'Saving...' : item ? 'Save changes' : 'Add item'}
             </button>
@@ -601,7 +602,7 @@ function Field({ label, required = false, children }) {
   return (
     <label className="block">
       <span className="block text-xs font-medium text-ink dark:text-offwhite mb-1.5">
-        {label}{required && <span className="text-bad ml-0.5">*</span>}
+        {label}{required && <span className="text-badText ml-0.5">*</span>}
       </span>
       {children}
     </label>

@@ -223,7 +223,7 @@ export default function AdvancedInsights() {
                 </p>
               </div>
             )}
-            {summaryError && <p className="text-xs text-bad mt-1.5">{summaryError}</p>}
+            {summaryError && <p className="text-xs text-badText mt-1.5">{summaryError}</p>}
           </div>
         </>
       )}

@@ -77,7 +77,7 @@ function NarrationAction({ observations }) {
         </>
       )}
 
-      {error && <p className="text-xs text-bad mt-1.5">{error}</p>}
+      {error && <p className="text-xs text-badText mt-1.5">{error}</p>}
 
       {/* Same treatment as the Phase 34 explanations: a separate, clearly
           labeled box, never styled as data, never inline with the figures. */}
@@ -202,7 +202,7 @@ export default function FinancialAssistCard() {
           </div>
         ) : error ? (
           <div className="py-1">
-            <p className="text-sm text-bad">{error}</p>
+            <p className="text-sm text-badText">{error}</p>
             <Button variant="text" onClick={() => setRefreshTick((t) => t + 1)} className="mt-1.5 text-sm">
               Retry
             </Button>

@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { SPENDING_CONTEXTS, contextForType, contextLabel } from '../../lib/spendingContext.js'
 import { ArrowLeft, X, AlertTriangle, Sparkles } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
@@ -74,6 +74,7 @@ export default function ReviewDrawer({ candidates, accounts, categories, onBack,
     }))
   )
   const [saving, setSaving] = useState(false)
+  const inFlight = useRef(false)
   const [error, setError] = useState(null)
 
   const updateRow = (key, patch) => {
@@ -92,7 +93,7 @@ export default function ReviewDrawer({ candidates, accounts, categories, onBack,
     return sum // transfers never affect net change
   }, 0)
 
-  const handleConfirm = async () => {
+  const confirmOnce = async () => {
     const toInsert = rows.filter((r) => r.included && canConfirmRow(r))
     if (toInsert.length === 0) {
       setError('Nothing to confirm yet — include or fix at least one row.')
@@ -142,6 +143,18 @@ export default function ReviewDrawer({ candidates, accounts, categories, onBack,
     }
   }
 
+  // P14 (N-6): a ref flips synchronously, so two clicks in the same instant cannot both pass,
+  // which the disabled button alone (it only updates on the next render) cannot promise.
+  const handleConfirm = async () => {
+    if (inFlight.current) return
+    inFlight.current = true
+    try {
+      await confirmOnce()
+    } finally {
+      inFlight.current = false
+    }
+  }
+
   return (
     <Modal onClose={onClose} titleId={titleId} className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center">
       <div
@@ -188,10 +201,10 @@ export default function ReviewDrawer({ candidates, accounts, categories, onBack,
               {expenseCount} expense{expenseCount === 1 ? '' : 's'} · {incomeCount} income
             </span>
             <span className="text-muted dark:text-mutedDark">·</span>
-            <span className={netChange < 0 ? 'text-bad' : 'text-good'}>Net {netChange >= 0 ? '+' : ''}{formatCurrency(netChange)}</span>
+            <span className={netChange < 0 ? 'text-badText' : 'text-goodText'}>Net {netChange >= 0 ? '+' : ''}{formatCurrency(netChange)}</span>
           </div>
 
-          {error && <p className="text-sm text-bad">{error}</p>}
+          {error && <p className="text-sm text-badText">{error}</p>}
 
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={onClose} className="px-3 py-2 rounded-lg">
@@ -302,7 +315,7 @@ function FallbackAiAction({ row, accounts, categories, onChange }) {
           </AiDisclosure>
         </>
       )}
-      {error && <p className="text-xs text-bad mt-1">{error}</p>}
+      {error && <p className="text-xs text-badText mt-1">{error}</p>}
       {tried && !error && row.aiFallbackNote && (
         <p className="text-xs text-muted dark:text-mutedDark mt-1">AI read this as: {row.aiFallbackNote}</p>
       )}
@@ -348,8 +361,9 @@ function RowEditor({ row, accounts, categories, onChange }) {
         <select
           value={row.type || ''}
           onChange={(e) => onChange({ type: e.target.value || null })}
+          aria-label="Transaction type"
           className={`rounded-md px-2 py-1 bg-paper dark:bg-charcoal ${
-            row.assumedType ? 'border border-dashed border-gold text-gold' : 'border border-line dark:border-lineDark'
+            row.assumedType ? 'border border-dashed border-gold text-goldText' : 'border border-line dark:border-lineDark'
           }`}
         >
           <option value="">Type...</option>
@@ -357,12 +371,13 @@ function RowEditor({ row, accounts, categories, onChange }) {
           <option value="income">Income</option>
           <option value="transfer">Transfer</option>
         </select>
-        {row.assumedType && <span className="text-gold">suggested</span>}
+        {row.assumedType && <span className="text-goldText">suggested</span>}
 
         {row.type !== 'transfer' && (
           <select
             value={row.categoryId || ''}
             onChange={(e) => onChange({ categoryId: e.target.value || null })}
+            aria-label="Category"
             className="rounded-md px-2 py-1 bg-paper dark:bg-charcoal border border-line dark:border-lineDark"
           >
             <option value="">Category...</option>
@@ -383,7 +398,7 @@ function RowEditor({ row, accounts, categories, onChange }) {
               onChange={(e) => onChange({ spendingContext: e.target.value, contextSource: null, contextConflict: [] })}
               aria-label="Spending context"
               className={`rounded-md px-2 py-1 bg-paper dark:bg-charcoal ${
-                contextSuggested ? 'border border-dashed border-gold text-gold' : 'border border-line dark:border-lineDark'
+                contextSuggested ? 'border border-dashed border-gold text-goldText' : 'border border-line dark:border-lineDark'
               }`}
             >
               <option value="">Context...</option>
@@ -393,13 +408,14 @@ function RowEditor({ row, accounts, categories, onChange }) {
                 </option>
               ))}
             </select>
-            {contextSuggested && <span className="text-gold">suggested · from “{row.contextMatched}”</span>}
+            {contextSuggested && <span className="text-goldText">suggested · from “{row.contextMatched}”</span>}
           </>
         )}
 
         <select
           value={row.accountId || ''}
           onChange={(e) => onChange({ accountId: e.target.value || null })}
+          aria-label={row.type === 'transfer' ? 'From account' : 'Account'}
           className="rounded-md px-2 py-1 bg-paper dark:bg-charcoal border border-line dark:border-lineDark"
         >
           <option value="">{row.type === 'transfer' ? 'From account...' : 'Account...'}</option>
@@ -414,6 +430,7 @@ function RowEditor({ row, accounts, categories, onChange }) {
           <select
             value={row.toAccountId || ''}
             onChange={(e) => onChange({ toAccountId: e.target.value || null })}
+            aria-label="To account"
             className="rounded-md px-2 py-1 bg-paper dark:bg-charcoal border border-line dark:border-lineDark"
           >
             <option value="">To account...</option>
@@ -429,19 +446,20 @@ function RowEditor({ row, accounts, categories, onChange }) {
           type="date"
           value={row.date || ''}
           onChange={(e) => onChange({ date: e.target.value })}
+          aria-label="Transaction date"
           className="rounded-md px-2 py-1 bg-paper dark:bg-charcoal border border-line dark:border-lineDark font-mono"
         />
       </div>
 
       {row.type === 'expense' && !row.spendingContext && row.contextConflict?.length > 1 && (
-        <div className="flex items-center gap-1.5 text-xs text-gold">
+        <div className="flex items-center gap-1.5 text-xs text-goldText">
           <AlertTriangle size={13} />
           {joinWithAnd(row.contextConflict.map(contextLabel))} both apply — pick one context.
         </div>
       )}
 
       {row.duplicate?.isDuplicate && (
-        <div className="flex items-center gap-1.5 text-xs text-gold">
+        <div className="flex items-center gap-1.5 text-xs text-goldText">
           <AlertTriangle size={13} />
           {row.duplicate.reason}
         </div>

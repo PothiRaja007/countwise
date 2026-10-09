@@ -19,7 +19,7 @@ export default function AccessError({ onRetry, onContinue }) {
           <button
             type="button"
             onClick={onContinue}
-            className="text-sm text-muted dark:text-mutedDark hover:text-gold transition-colors"
+            className="text-sm text-muted dark:text-mutedDark hover:text-goldText transition-colors"
           >
             Continue to app
           </button>

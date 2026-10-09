@@ -50,7 +50,7 @@ export function WebInstall({ platform, deviceOs, onInstalled }) {
   if (platform.id !== deviceOs) {
     body = <p>To install the web app, open this page on your {platform.device}.</p>
   } else if (standalone || installed) {
-    body = <p className="text-good">CountWise is already installed on this device.</p>
+    body = <p className="text-goodText">CountWise is already installed on this device.</p>
   } else if (platform.id === 'ios') {
     body = (
       <div className="space-y-2">
@@ -99,7 +99,7 @@ export function WebInstall({ platform, deviceOs, onInstalled }) {
 export function NativeStatus({ platform }) {
   const download = getNativeDownload(platform)
   return download ? (
-    <a href={download.url} className="text-gold hover:underline">
+    <a href={download.url} className="text-goldText hover:underline">
       Download version {download.version}
     </a>
   ) : (

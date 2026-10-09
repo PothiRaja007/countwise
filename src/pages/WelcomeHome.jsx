@@ -23,7 +23,7 @@ const TITLE =
   'font-display font-normal text-[clamp(1.75rem,4vw,3rem)] leading-[1.1] tracking-[-0.015em] text-charcoal dark:text-offwhite'
 const TEXT = 'max-w-[40ch] text-lg leading-relaxed text-brown dark:text-mutedDark'
 const LINK =
-  'inline-block border-b border-gold pb-0.5 text-[1.05rem] text-charcoal dark:text-offwhite transition-colors hover:text-gold bg-transparent cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-4 focus-visible:ring-offset-paper dark:focus-visible:ring-offset-charcoal'
+  'inline-block border-b border-gold pb-0.5 text-[1.05rem] text-charcoal dark:text-offwhite transition-colors hover:text-goldText bg-transparent cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-4 focus-visible:ring-offset-paper dark:focus-visible:ring-offset-charcoal'
 
 // Fades a block in once, the first time it scrolls into view.
 // `from` makes it slide in from a side instead of rising.
@@ -97,7 +97,7 @@ function MoneyInboxIllustration() {
         {row('Dinner with friends', 'Expense · Bank', '−₹500')}
         {row('Bus', 'Expense · Wallet', '−₹40')}
       </div>
-      <div className="mt-4 inline-block rounded-full bg-gold px-5 py-2 text-sm font-medium text-white">Confirm</div>
+      <div className="mt-4 inline-block rounded-full bg-gold px-5 py-2 text-sm font-medium text-ink">Confirm</div>
     </Frame>
   )
 }

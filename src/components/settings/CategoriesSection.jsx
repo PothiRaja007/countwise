@@ -194,7 +194,7 @@ export default function CategoriesSection() {
   if (error) {
     return (
       <div>
-        <p className="text-sm text-bad">{error}</p>
+        <p className="text-sm text-badText">{error}</p>
         <Button variant="text" onClick={load} className="mt-1.5 text-sm">
           Retry
         </Button>
@@ -250,7 +250,7 @@ export default function CategoriesSection() {
               onClick={() => setFilterKind(opt.value)}
               className={`text-xs px-2.5 py-1 rounded transition-colors ${
                 filterKind === opt.value
-                  ? 'bg-gold text-white font-medium'
+                  ? 'bg-gold text-ink font-medium'
                   : 'text-muted dark:text-mutedDark hover:text-ink dark:hover:text-offwhite'
               }`}
             >
@@ -301,7 +301,7 @@ export default function CategoriesSection() {
                       <button
                         onClick={() => handleRenameSave(category)}
                         aria-label="Save name"
-                        className="p-1.5 text-good hover:bg-paper dark:hover:bg-charcoal rounded"
+                        className="p-1.5 text-goodText hover:bg-paper dark:hover:bg-charcoal rounded"
                       >
                         <Check size={15} />
                       </button>
@@ -367,7 +367,7 @@ export default function CategoriesSection() {
                       />
                       <button
                         onClick={() => handleAddKeyword(category)}
-                        className="text-xs text-gold hover:underline"
+                        className="text-xs text-goldText hover:underline"
                       >
                         Add
                       </button>
@@ -381,7 +381,7 @@ export default function CategoriesSection() {
                   ) : (
                     <button
                       onClick={() => setAddingKeywordFor(category.id)}
-                      className="text-xs text-muted dark:text-mutedDark hover:text-gold"
+                      className="text-xs text-muted dark:text-mutedDark hover:text-goldText"
                     >
                       + Add keyword
                     </button>
@@ -389,7 +389,7 @@ export default function CategoriesSection() {
                 </div>
               )}
 
-              {rowError[category.id] && <p className="text-xs text-bad mt-1.5">{rowError[category.id]}</p>}
+              {rowError[category.id] && <p className="text-xs text-badText mt-1.5">{rowError[category.id]}</p>}
             </div>
           )
         })}

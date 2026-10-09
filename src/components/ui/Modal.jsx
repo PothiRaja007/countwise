@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { markModalClosed } from '../../lib/modalGuard.js'
 
 // Accessible behavior wrapper around every modal/drawer/sheet in the app —
 // each caller keeps its own visual markup (header, body, footer, sizing,
@@ -62,6 +63,7 @@ export default function Modal({ onClose, className = '', titleId, label, childre
       // false in the parent, React stops rendering <Modal> and removes the
       // <dialog> element from the DOM — there's nothing left to explicitly
       // close.
+      markModalClosed()
       const toRestore = previouslyFocused.current
       if (toRestore && typeof toRestore.focus === 'function' && document.contains(toRestore)) {
         toRestore.focus()

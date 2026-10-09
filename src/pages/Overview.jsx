@@ -247,7 +247,7 @@ export default function Overview() {
                       onClick={() => setRhythmPeriod(p.key)}
                       className={`px-2 py-1 text-xs rounded-md transition-colors ${
                         rhythmPeriod === p.key
-                          ? 'bg-gold/10 text-gold font-medium'
+                          ? 'bg-gold/10 text-goldText font-medium'
                           : 'text-muted dark:text-mutedDark hover:bg-surface dark:hover:bg-charcoalSurface'
                       }`}
                     >
@@ -274,13 +274,13 @@ export default function Overview() {
               {behaviorScore.sufficientData ? (
                 <>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-0.5" aria-label={`${behaviorScore.stars} out of 5 stars`}>
+                    <div className="flex items-center gap-0.5" role="img" aria-label={`${behaviorScore.stars} out of 5 stars`}>
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
                           key={star}
                           size={16}
                           strokeWidth={1.7}
-                          className={star <= Math.round(behaviorScore.stars) ? 'fill-gold text-gold' : 'text-line dark:text-lineDark'}
+                          className={star <= Math.round(behaviorScore.stars) ? 'fill-gold text-goldText' : 'text-line dark:text-lineDark'}
                         />
                       ))}
                     </div>
@@ -357,7 +357,7 @@ export default function Overview() {
 // numbers previously shared identical size/weight (text-2xl font-semibold)
 // and needed to stop doing that.
 function SnapshotItem({ label, value, tone, accent }) {
-  const toneClass = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-bad' : accent ? 'text-gold' : 'text-ink dark:text-offwhite'
+  const toneClass = tone === 'good' ? 'text-goodText' : tone === 'bad' ? 'text-badText' : accent ? 'text-goldText' : 'text-ink dark:text-offwhite'
   // The larger jump waits for md: (768px+) rather than firing at sm:
   // (640px) — verified live that a large (7-figure) balance at 36px
   // doesn't comfortably fit this row's three-column share right at 640px.
@@ -384,7 +384,7 @@ function SnapshotItem({ label, value, tone, accent }) {
 function TransactionRow({ transaction, categoryName, accountName, toAccountName, label }) {
   const isTransfer = transaction.type === 'transfer'
   const isIncome = transaction.type === 'income'
-  const amountClass = isTransfer ? 'text-ink dark:text-offwhite' : isIncome ? 'text-good' : 'text-bad'
+  const amountClass = isTransfer ? 'text-ink dark:text-offwhite' : isIncome ? 'text-goodText' : 'text-badText'
   const sign = isTransfer ? '' : isIncome ? '+' : '-'
   const pillLabel = isTransfer ? 'Transfer' : categoryName || (isIncome ? 'Income' : 'Expense')
 

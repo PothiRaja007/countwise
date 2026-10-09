@@ -12,7 +12,7 @@
 //
 // Visual language is deliberately NOT new: it extends the dashed-gold
 // treatment already used for parser-suggested values in Money Inbox's
-// ReviewDrawer.jsx (`border border-dashed border-gold text-gold` on a
+// ReviewDrawer.jsx (`border border-dashed border-gold text-goldText` on a
 // select, plus a small adjacent "suggested" label) into one reusable
 // component, instead of that pattern being redefined ad hoc per page.
 //
@@ -42,7 +42,7 @@ function ProvenanceDetail({ source, sourceUrl, effectiveDate, assumptions }) {
   return (
     <details className="inline-block align-middle">
       <summary
-        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-gold/60 text-gold text-[9px] leading-none cursor-pointer select-none list-none marker:content-none [&::-webkit-details-marker]:hidden"
+        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-gold/60 text-goldText text-[9px] leading-none cursor-pointer select-none list-none marker:content-none [&::-webkit-details-marker]:hidden"
         aria-label="Show source and assumptions"
       >
         i
@@ -54,7 +54,7 @@ function ProvenanceDetail({ source, sourceUrl, effectiveDate, assumptions }) {
           <p key={i}>{line}</p>
         ))}
         {sourceUrl && (
-          <a href={sourceUrl} target="_blank" rel="noreferrer" className="text-gold hover:underline inline-block">
+          <a href={sourceUrl} target="_blank" rel="noreferrer" className="text-goldText hover:underline inline-block">
             Official source
           </a>
         )}
@@ -94,19 +94,19 @@ export default function ValueBadge({ kind = 'actual', label, confidence, provena
         )
       ) : (
         isMarkedKind && (
-          <span className="inline-flex border border-dashed border-gold rounded-md px-1.5 py-0.5 text-[11px] font-medium text-gold whitespace-nowrap">
+          <span className="inline-flex border border-dashed border-gold rounded-md px-1.5 py-0.5 text-[11px] font-medium text-goldText whitespace-nowrap">
             {chipText}
           </span>
         )
       )}
       {children != null && (isMarkedKind || isUncertain) && (
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gold whitespace-nowrap">
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-goldText whitespace-nowrap">
           {isMarkedKind && chipText}
           {isUncertain && <span>{isMarkedKind ? '· uncertain' : 'Uncertain'}</span>}
         </span>
       )}
       {children == null && isUncertain && (
-        <span className="text-[11px] font-medium text-gold whitespace-nowrap">Uncertain</span>
+        <span className="text-[11px] font-medium text-goldText whitespace-nowrap">Uncertain</span>
       )}
       {hasProvenance && <ProvenanceDetail {...provenance} />}
     </span>

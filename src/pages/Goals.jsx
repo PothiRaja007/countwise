@@ -229,7 +229,7 @@ export default function Goals() {
       {error && <ErrorState message={error} onRetry={load} />}
 
       {actionError && (
-        <div className="flex items-center justify-between gap-3 text-sm text-bad">
+        <div className="flex items-center justify-between gap-3 text-sm text-badText">
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)} aria-label="Dismiss error" className="shrink-0">
             <X size={14} />
@@ -384,16 +384,29 @@ function GoalFormModal({ title, submitLabel, initialName = '', initialTargetAmou
   const [targetDate, setTargetDate] = useState(initialTargetDate)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState(null)
+  const inFlight = useRef(false)
 
   const canSave = name.trim().length > 0 && Number(targetAmount) > 0
 
-  const handleSave = async () => {
+  const saveOnce = async () => {
     if (!canSave) return
     setSaving(true)
     setFormError(null)
     const err = await onSubmit({ name: name.trim(), targetAmount: Number(targetAmount), targetDate })
     setSaving(false)
     if (err) setFormError(err)
+  }
+
+  // P14 (N-6): a ref flips synchronously, so two clicks in the same instant cannot both pass,
+  // which the disabled button alone (it only updates on the next render) cannot promise.
+  const handleSave = async () => {
+    if (inFlight.current) return
+    inFlight.current = true
+    try {
+      await saveOnce()
+    } finally {
+      inFlight.current = false
+    }
   }
 
   return (
@@ -434,12 +447,13 @@ function GoalFormModal({ title, submitLabel, initialName = '', initialTargetAmou
               type="date"
               value={targetDate}
               onChange={(e) => setTargetDate(e.target.value)}
+              aria-label="Target date (optional)"
               className="w-full bg-paper dark:bg-charcoal rounded-lg px-3 py-2 text-sm font-mono"
             />
             <p className="text-xs text-muted dark:text-mutedDark mt-1">Optional — leave blank if this goal has no deadline.</p>
           </div>
 
-          {formError && <p className="text-xs text-bad">{formError}</p>}
+          {formError && <p className="text-xs text-badText">{formError}</p>}
         </div>
 
         <div className="flex justify-end gap-2">

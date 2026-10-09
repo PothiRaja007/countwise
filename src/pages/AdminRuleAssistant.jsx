@@ -198,7 +198,7 @@ export default function AdminRuleAssistant() {
           {extracting ? 'Asking...' : 'Extract with AI'}
         </Button>
         <AiDisclosure>Sends this text to Google's Gemini AI to draft the fields below.</AiDisclosure>
-        {extractError && <p className="text-xs text-bad">{extractError}</p>}
+        {extractError && <p className="text-xs text-badText">{extractError}</p>}
       </div>
 
       <div className="border border-line dark:border-lineDark rounded-lg p-4 space-y-3">
@@ -217,7 +217,7 @@ export default function AdminRuleAssistant() {
         </div>
         {form.note && <p className="text-xs text-muted dark:text-mutedDark italic">AI note: {form.note}</p>}
         <Button onClick={handleReview}>Review this proposal</Button>
-        {reviewError && <p className="text-xs text-bad">{reviewError}</p>}
+        {reviewError && <p className="text-xs text-badText">{reviewError}</p>}
       </div>
 
       {reviewing && (
@@ -243,10 +243,10 @@ export default function AdminRuleAssistant() {
               Cancel
             </Button>
           </div>
-          {approveError && <p className="text-xs text-bad">{approveError}</p>}
+          {approveError && <p className="text-xs text-badText">{approveError}</p>}
         </div>
       )}
-      {approvedMessage && <p className="text-sm text-good">{approvedMessage}</p>}
+      {approvedMessage && <p className="text-sm text-goodText">{approvedMessage}</p>}
 
       <div>
         <p className="text-sm font-medium mb-2">Existing rules</p>

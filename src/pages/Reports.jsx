@@ -217,15 +217,15 @@ export default function Reports() {
           <tbody className="divide-y divide-line dark:divide-lineDark">
             <tr>
               <td className="py-2 text-muted dark:text-mutedDark">Income</td>
-              <td className="py-2 text-right font-mono text-good">{formatCurrency(income)}</td>
+              <td className="py-2 text-right font-mono text-goodText">{formatCurrency(income)}</td>
             </tr>
             <tr>
               <td className="py-2 text-muted dark:text-mutedDark">Expenses</td>
-              <td className="py-2 text-right font-mono text-bad">{formatCurrency(expenses)}</td>
+              <td className="py-2 text-right font-mono text-badText">{formatCurrency(expenses)}</td>
             </tr>
             <tr>
               <td className="py-2 text-ink dark:text-offwhite font-medium">Net cash flow</td>
-              <td className={`py-2 text-right font-mono font-medium ${net < 0 ? 'text-bad' : 'text-good'}`}>{formatCurrency(net)}</td>
+              <td className={`py-2 text-right font-mono font-medium ${net < 0 ? 'text-badText' : 'text-goodText'}`}>{formatCurrency(net)}</td>
             </tr>
           </tbody>
         </table>
@@ -332,10 +332,10 @@ export default function Reports() {
                     </td>
                     <td className="py-2 pr-4 text-muted dark:text-mutedDark">{b.period_start.slice(0, 7)}</td>
                     <td className="py-2 pr-4 font-mono">{formatCurrency(b.spent)}</td>
-                    <td className={`py-2 pr-4 font-mono ${b.over ? 'text-bad' : ''}`}>
+                    <td className={`py-2 pr-4 font-mono ${b.over ? 'text-badText' : ''}`}>
                       {b.over ? `${formatCurrency(Math.abs(b.remaining))} over` : formatCurrency(b.remaining)}
                     </td>
-                    <td className={`py-2 font-mono ${b.over ? 'text-bad' : 'text-muted dark:text-mutedDark'}`}>{b.percent.toFixed(0)}%</td>
+                    <td className={`py-2 font-mono ${b.over ? 'text-badText' : 'text-muted dark:text-mutedDark'}`}>{b.percent.toFixed(0)}%</td>
                   </tr>
                 ))}
               </tbody>

@@ -163,8 +163,8 @@ export default function ProfileSection() {
         </p>
       </div>
 
-      {error && <p className="text-sm text-bad">{error}</p>}
-      {saved && !dirty && <p className="text-sm text-good">Saved.</p>}
+      {error && <p className="text-sm text-badText">{error}</p>}
+      {saved && !dirty && <p className="text-sm text-goodText">Saved.</p>}
 
       <Button
         onClick={handleSave}
@@ -187,7 +187,7 @@ export default function ProfileSection() {
                 }}
                 className={`py-2.5 rounded-md border text-sm font-medium transition-colors ${
                   incomeType === opt.value
-                    ? 'border-gold bg-gold/10 text-gold'
+                    ? 'border-gold bg-gold/10 text-goldText'
                     : 'border-line dark:border-lineDark bg-surface dark:bg-charcoalSurface text-ink dark:text-offwhite hover:border-gold/50'
                 }`}
               >
@@ -200,8 +200,8 @@ export default function ProfileSection() {
           </p>
         </div>
 
-        {incomeTypeError && <p className="text-sm text-bad">{incomeTypeError}</p>}
-        {incomeTypeSaved && !incomeTypeDirty && <p className="text-sm text-good">Saved.</p>}
+        {incomeTypeError && <p className="text-sm text-badText">{incomeTypeError}</p>}
+        {incomeTypeSaved && !incomeTypeDirty && <p className="text-sm text-goodText">Saved.</p>}
 
         <Button
           onClick={handleIncomeTypeSave}
@@ -226,7 +226,7 @@ export default function ProfileSection() {
                   }}
                   className={`py-2.5 rounded-md border text-sm font-medium transition-colors ${
                     employeeSubtype === opt.value
-                      ? 'border-gold bg-gold/10 text-gold'
+                      ? 'border-gold bg-gold/10 text-goldText'
                       : 'border-line dark:border-lineDark bg-surface dark:bg-charcoalSurface text-ink dark:text-offwhite hover:border-gold/50'
                   }`}
                 >
@@ -239,8 +239,8 @@ export default function ProfileSection() {
             </p>
           </div>
 
-          {subtypeError && <p className="text-sm text-bad">{subtypeError}</p>}
-          {subtypeSaved && !subtypeDirty && <p className="text-sm text-good">Saved.</p>}
+          {subtypeError && <p className="text-sm text-badText">{subtypeError}</p>}
+          {subtypeSaved && !subtypeDirty && <p className="text-sm text-goodText">Saved.</p>}
 
           <Button
             onClick={handleSubtypeSave}

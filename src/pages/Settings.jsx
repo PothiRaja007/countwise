@@ -45,7 +45,7 @@ export default function Settings() {
               onClick={() => setActiveId(section.id)}
               className={`px-3 py-2 text-sm -mb-px border-b-2 transition-colors ${
                 section.id === activeId
-                  ? 'border-gold text-gold font-medium'
+                  ? 'border-gold text-goldText font-medium'
                   : 'border-transparent text-muted dark:text-mutedDark hover:text-ink dark:hover:text-offwhite'
               }`}
             >

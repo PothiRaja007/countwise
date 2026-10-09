@@ -53,7 +53,7 @@ export default function ThankYou({ mode, onContinue, busy = false, error = null 
       <main className="flex-1 w-full max-w-2xl mx-auto px-6 sm:px-8 py-10 sm:py-14">
         <div className="font-display text-lg font-semibold tracking-tight">
           <span className="text-ink dark:text-offwhite">Count</span>
-          <span className="text-gold">Wise</span>
+          <span className="text-goldText">Wise</span>
         </div>
 
         <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight mt-16">{title}</h1>
@@ -62,7 +62,7 @@ export default function ThankYou({ mode, onContinue, busy = false, error = null 
         </p>
         <p className="mt-6 text-xs uppercase tracking-[0.14em] text-muted dark:text-mutedDark">Every expense counts</p>
 
-        {error && <p className="mt-6 text-sm text-bad">{error}</p>}
+        {error && <p className="mt-6 text-sm text-badText">{error}</p>}
 
         <div className="mt-8">
           <Button onClick={() => onContinue(via)} disabled={busy} className="px-5 py-2.5 rounded-lg">

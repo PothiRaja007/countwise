@@ -250,7 +250,7 @@ export default function Transactions() {
 }
 
 function SummaryItem({ label, value, tone }) {
-  const toneClass = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-bad' : 'text-ink dark:text-offwhite'
+  const toneClass = tone === 'good' ? 'text-goodText' : tone === 'bad' ? 'text-badText' : 'text-ink dark:text-offwhite'
   return (
     <div className="flex-1 py-4 sm:px-6 first:sm:pl-0">
       <div className="text-xs font-medium text-muted dark:text-mutedDark uppercase tracking-wide mb-1.5">{label}</div>
@@ -324,7 +324,7 @@ function FilterBar({ filters, onChange, categories, accounts, sortBy, sortDir, o
 function TransactionRow({ transaction, categoryName, accountName, toAccountName, dateLabel, onEdit, onDelete }) {
   const isTransfer = transaction.type === 'transfer'
   const isIncome = transaction.type === 'income'
-  const amountClass = isTransfer ? 'text-ink dark:text-offwhite' : isIncome ? 'text-good' : 'text-bad'
+  const amountClass = isTransfer ? 'text-ink dark:text-offwhite' : isIncome ? 'text-goodText' : 'text-badText'
   const sign = isTransfer ? '' : isIncome ? '+' : '-'
   const pillLabel = isTransfer ? 'Transfer' : categoryName || (isIncome ? 'Income' : 'Expense')
   // Spending context only ever exists on an expense (the database enforces it).
@@ -355,10 +355,10 @@ function TransactionRow({ transaction, categoryName, accountName, toAccountName,
           {dateLabel && <div className="font-mono text-xs text-muted dark:text-mutedDark">{dateLabel}</div>}
         </div>
         <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
-          <button onClick={onEdit} className="p-1.5 text-muted dark:text-mutedDark hover:text-gold" aria-label="Edit transaction">
+          <button onClick={onEdit} className="p-1.5 text-muted dark:text-mutedDark hover:text-goldText" aria-label="Edit transaction">
             <Pencil size={14} />
           </button>
-          <button onClick={onDelete} className="p-1.5 text-muted dark:text-mutedDark hover:text-bad" aria-label="Delete transaction">
+          <button onClick={onDelete} className="p-1.5 text-muted dark:text-mutedDark hover:text-badText" aria-label="Delete transaction">
             <Trash2 size={14} />
           </button>
         </div>

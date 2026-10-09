@@ -239,7 +239,7 @@ function ExplainAction({ totals, gross, takeHome }) {
         </>
       )}
 
-      {error && <p className="text-xs text-bad mt-1.5">{error}</p>}
+      {error && <p className="text-xs text-badText mt-1.5">{error}</p>}
 
       {/* Deliberately NOT a ValueBadge and NOT the gold dashed-border
           treatment used for calculated/estimated/suggested values — an
@@ -329,7 +329,7 @@ function ComponentEntryForm({ onAdd }) {
         </div>
       </div>
 
-      {formError && <p className="text-xs text-bad">{formError}</p>}
+      {formError && <p className="text-xs text-badText">{formError}</p>}
 
       <Button variant="text" onClick={handleAdd} className="flex items-center gap-1.5 text-sm font-medium">
         <Plus size={14} />
@@ -665,7 +665,7 @@ export default function CTCExplorer() {
                       <button
                         onClick={() => handleRemoveDraftComponent(c.id)}
                         aria-label={`Remove ${c.name}`}
-                        className="text-muted dark:text-mutedDark hover:text-bad"
+                        className="text-muted dark:text-mutedDark hover:text-badText"
                       >
                         <X size={16} />
                       </button>
@@ -713,7 +713,7 @@ export default function CTCExplorer() {
                 document.
               </AiDisclosure>
 
-              {extractError && <p className="text-xs text-bad">{extractError}</p>}
+              {extractError && <p className="text-xs text-badText">{extractError}</p>}
             </div>
 
             <ComponentEntryForm onAdd={handleAddDraftComponent} />
@@ -721,7 +721,7 @@ export default function CTCExplorer() {
 
           <CtcBreakdown components={draftComponents} />
 
-          {saveError && <p className="text-sm text-bad">{saveError}</p>}
+          {saveError && <p className="text-sm text-badText">{saveError}</p>}
 
           <div className="flex items-center gap-2 pt-2">
             <button
