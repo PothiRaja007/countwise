@@ -1,0 +1,38 @@
+// J5 — "Received my salary": an estimate panel suggests an amount; the normal review screen writes ONE income.
+import { test, expect } from '../support/fixtures.js'
+
+test('J5: received my salary — estimate, Use, Review, Confirm writes one income', async ({ app, page }) => {
+  await app.open('/', 'sal')
+  const start = await app.counts()
+  await app.say('Received my salary')
+  await expect(page.getByText('Estimated take-home from your active salary structure: ₹52,000')).toBeVisible()
+  await expect(page.getByText('This is an estimate, not money you have received.')).toBeVisible()
+  await expect(page.getByText('Nothing is saved until you press Confirm on the review screen.')).toBeVisible()
+  expect(await app.writes()).toEqual([])
+  await app.btn('Use ₹52,000').click()
+  await expect(app.box()).toHaveValue('Received my salary 52000')
+  expect(await app.writes(), 'Use saves nothing and opens no review').toEqual([])
+  await app.btn('Review').first().click()
+  await expect(app.btn('Confirm')).toBeVisible()
+  expect(await app.writes()).toEqual([])
+  await page.locator('select').nth(2).selectOption('a1')
+  await app.btn('Confirm').click()
+  await expect.poll(async () => (await app.writes()).length).toBe(1)
+  expect(app.delta(start, await app.counts())).toEqual({ transactions: 1 })
+  const t = (await app.rows('transactions')).at(-1)
+  expect(t).toMatchObject({ type: 'income', amount: 52000, account_id: 'a1' })
+  expect(await app.writeTables()).toEqual(['transactions:insert'])
+  expect((await app.writeTables()).some((w) => w.startsWith('salary')), 'the salary tables are never written').toBe(false)
+})
+
+test('J5b: a typed amount skips the panel; no structure explains itself', async ({ app, page }) => {
+  await app.open('/', 'sal')
+  await app.say('salary received 52000 sbi')
+  await expect(app.btn('Confirm')).toBeVisible()
+  await expect(page.getByText('Estimated take-home')).toHaveCount(0)
+  await app.open('/', 'base')
+  await app.say('Received my salary')
+  await expect(page.getByText("You have no active salary structure, so I can't suggest an amount.")).toBeVisible()
+  await expect(page.getByText(/Use ₹/)).toHaveCount(0)
+  expect(await app.writes()).toEqual([])
+})
