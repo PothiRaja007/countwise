@@ -5,10 +5,11 @@
 //   C1  the P0 baseline files (parser, corpora, golden inputs, snapshot) are byte-for-byte what P0 froze
 //   C2  every baseline, command-shaped, bare-word, mixed, date, live-rule, corpus and red-team text: the interpreter's
 //       kind is exactly what it was at the P8b lock (a frozen fingerprint), so P9 to P11 changed nothing for old input
-//   C3  the P10 salary and pension hooks fire on exactly ONE of those texts: "Received my salary" (intended, approved)
+//   C3  the P10 salary and pension hooks fire on exactly TWO of those texts, both intended differences caused by P10 and
+//       recorded as such: "Received my salary" and "How much did I pay for my pension?"
 //   C4  the P11 hidden-mix guard fires on NONE of them
 //   C5  every text the interpreter calls a transaction reaches the unchanged review path (no hook fires on it) apart
-//       from the one intended difference, and its review candidates equal the parser's own output
+//       from the intended P10 difference "Received my salary", and its review candidates equal the parser's own output
 //   C6  the frozen mixed inputs still get the interpreter's own mixed-input answer
 //   C7  the Money Inbox transaction block is still the pinned 951 characters
 //   M1  multi-event messages still split into the right rows
@@ -153,6 +154,8 @@ test('M4: KNOWN LIMIT of the parser (locked, so only pinned here): "then", "also
     assert.deepStrictEqual(rowsOf(t).length, 1, `${t}: one row today`)
     assert.equal(detectHiddenMix(t, ctx, NOW), null, 'entry + entry is not a mix; the review screen shows what was read')
   }
+  // the exact example recorded for a future parser decision
+  assert.deepStrictEqual(rowsOf('rent 4000 sbi then dinner 500 sbi').length, 1, 'known limit: one row, not two')
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)
