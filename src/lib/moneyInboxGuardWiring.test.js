@@ -86,7 +86,7 @@ test('U5: the panel is shown in both modes and cannot write', () => {
   assert.ok(!/\.(insert|update|upsert|delete)\(/.test(code), 'MoneyInboxInput has no write')
 })
 
-test('U6: only MoneyInboxInput calls interpret()', () => {
+test('U6: only MoneyInboxInput calls interpret(), apart from the P11 hidden-mix guard, which only reads what each clause of a message is and builds nothing from it', () => {
   const hits = []
   const walk = (dir) => {
     for (const name of readdirSync(dir)) {
@@ -99,7 +99,7 @@ test('U6: only MoneyInboxInput calls interpret()', () => {
     }
   }
   walk(SRC)
-  assert.deepEqual(hits, [INPUT])
+  assert.deepEqual([...hits].sort(), [INPUT, 'lib/command/mixedInput.js'].sort())
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

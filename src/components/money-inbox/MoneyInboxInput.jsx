@@ -25,6 +25,7 @@ import { detectLearningPayment, learningOfferView, learningOfferPending, LEARNIN
 import { budgetCommandView, resolveBudgetCommandChoice, budgetChoiceNotice, BUDGET_COMMAND_MESSAGES } from '../../lib/command/budgetCommands.js'
 import { detectSalaryReceipt, salaryReceiptState, salaryReceiptView, resolveSalaryChoice, salaryReceiptPending, salaryReceiptText, SALARY_CHOICES, SALARY_MESSAGES } from '../../lib/command/salaryReceipt.js'
 import { pensionQuestionFromResult, pensionQuestionFromChoice, looksLikePensionEstimateRequest, pensionAnswer, pensionDataProblem, PENSION_ACTIONS, PENSION_MESSAGES } from '../../lib/command/pensionEstimate.js'
+import { detectHiddenMix } from '../../lib/command/mixedInput.js'
 import { estimatedTakeHomeMonthly, sumByCategory } from '../../lib/salaryEngine.js'
 import { calculateRetirementBreakdown } from '../../lib/pfEngine.js'
 
@@ -337,6 +338,26 @@ export default function MoneyInboxInput({ onClose, embedded = false, onSaved, in
           lists = { goals, activeGoals, learningItems: learningWithStatus, expenseCategories, categories: nameList(categories), accounts: nameList(accounts) }
         } catch {
           interpreted = null
+        }
+        // P11: a message that holds two kinds of thing the interpreter did not catch (an entry and a command, a
+        // question and a pension request, ...) is asked one thing at a time, exactly as the interpreter asks for the
+        // mixed input it does catch. Nothing is started or saved; Edit only brings the text back.
+        if (interpreted && interpreted.kind !== 'clarify' && lists) {
+          let hiddenMix = null
+          try {
+            hiddenMix = detectHiddenMix(
+              text,
+              { referenceDate: initialDate ? new Date(initialDate) : new Date(), goals: lists.goals, categories: lists.categories, learningItems: lists.learningItems, accounts: lists.accounts },
+              Date.now(),
+            )
+          } catch {
+            hiddenMix = null
+          }
+          if (hiddenMix) {
+            setGuard(hiddenMix)
+            setGuardLists(lists)
+            return
+          }
         }
         if (interpreted && interpreted.kind !== 'transaction') {
           // A complete request to open a page (P6) goes straight there.

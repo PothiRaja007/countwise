@@ -143,7 +143,9 @@ test('Z8: only Money Inbox imports the new modules; the contract table changed b
     }
   }
   walk('')
-  assert.deepStrictEqual(importers, { salary: [INPUT], pension: [INPUT] })
+  // Money Inbox, and the P11 hidden-mix guard (lib/command/mixedInput.js), which only asks them whether a clause is a salary or pension phrase.
+  const both = [INPUT, 'lib/command/mixedInput.js']
+  assert.deepStrictEqual({ salary: [...importers.salary].sort(), pension: [...importers.pension].sort() }, { salary: [...both].sort(), pension: [...both].sort() })
   const intents = read('lib/command/intents.js')
   assert.equal(sha(intents), '629a6efd6f40950f')
   assert.ok(/export const BUILT_THROUGH = 'P10'\n/.test(intents))
