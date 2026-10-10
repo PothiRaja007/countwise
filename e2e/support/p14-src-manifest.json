@@ -11,7 +11,7 @@
   "src/components/budgets/BudgetRecipeFlow.jsx": "2083d5d76e8156d9",
   "src/components/goals/ContributeModal.jsx": "b3925ee1c5bde3f7",
   "src/components/goals/GoalCard.jsx": "4e1c25dff114f349",
-  "src/components/layout/AppShell.jsx": "d8354fb39fec0ab2",
+  "src/components/layout/AppShell.jsx": "ac74bded902c32e9",
   "src/components/layout/ErrorState.jsx": "1b6c912dc1a83f74",
   "src/components/layout/LegalPageLayout.jsx": "eddb99d5b768cf25",
   "src/components/layout/PageHeader.jsx": "250a45a709330532",
@@ -237,7 +237,7 @@
   "src/pages/Settings.jsx": "5c2960b794267fb1",
   "src/pages/TermsAndConditions.jsx": "1dbab5b66fa7ee9e",
   "src/pages/ThankYou.jsx": "668bd0825297049b",
-  "src/pages/Transactions.jsx": "6b2bcc99267274de",
+  "src/pages/Transactions.jsx": "be44a92dfc90d70a",
   "src/pages/WelcomeHome.jsx": "8d8e84fe63c7f093",
   "src/styles/welcome.css": "674297ed9d449004"
 }

@@ -265,15 +265,16 @@ function FilterBar({ filters, onChange, categories, accounts, sortBy, sortDir, o
   // input/select, so it doesn't go through Input/Select.
   const inputClass =
     'rounded-md px-2.5 py-1.5 bg-surface dark:bg-charcoalSurface border border-line dark:border-lineDark text-sm outline-none focus:border-gold'
-  const fieldClass = 'rounded-md px-2.5 py-1.5 bg-surface dark:bg-charcoalSurface text-sm'
+  // w-full min-w-0 on a phone so every field fills its grid cell and never forces the page wider.
+  const fieldClass = 'rounded-md px-2.5 py-1.5 bg-surface dark:bg-charcoalSurface text-sm w-full min-w-0 sm:w-auto'
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
       <Input
         value={filters.search}
         onChange={(e) => onChange({ search: e.target.value })}
         placeholder="Search description..."
-        className={`${fieldClass} flex-1 min-w-[10rem]`}
+        className={`${fieldClass} col-span-2 sm:flex-1 sm:min-w-[10rem]`}
       />
 
       <Select value={filters.type} onChange={(e) => onChange({ type: e.target.value })} className={fieldClass}>
@@ -292,7 +293,7 @@ function FilterBar({ filters, onChange, categories, accounts, sortBy, sortDir, o
         ))}
       </Select>
 
-      <Select value={filters.accountId} onChange={(e) => onChange({ accountId: e.target.value })} className={fieldClass}>
+      <Select value={filters.accountId} onChange={(e) => onChange({ accountId: e.target.value })} className={`${fieldClass} col-span-2 sm:col-span-1`}>
         <option value="">All accounts</option>
         {accounts.map((a) => (
           <option key={a.id} value={a.id}>
@@ -302,21 +303,23 @@ function FilterBar({ filters, onChange, categories, accounts, sortBy, sortDir, o
       </Select>
 
       <Input type="date" value={filters.dateFrom} onChange={(e) => onChange({ dateFrom: e.target.value })} className={`${fieldClass} font-mono`} />
-      <span className="text-muted dark:text-mutedDark text-sm">to</span>
+      <span className="hidden sm:inline text-muted dark:text-mutedDark text-sm">to</span>
       <Input type="date" value={filters.dateTo} onChange={(e) => onChange({ dateTo: e.target.value })} className={`${fieldClass} font-mono`} />
 
-      <Select value={sortBy} onChange={(e) => onSortByChange(e.target.value)} className={fieldClass}>
-        <option value="date">Sort: Date</option>
-        <option value="amount">Sort: Amount</option>
-      </Select>
-      <button
-        onClick={() => onSortDirChange(sortDir === 'asc' ? 'desc' : 'asc')}
-        className={inputClass}
-        aria-label="Toggle sort direction"
-        title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
-      >
-        {sortDir === 'asc' ? '↑' : '↓'}
-      </button>
+      <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
+        <Select value={sortBy} onChange={(e) => onSortByChange(e.target.value)} className={`${fieldClass} flex-1`}>
+          <option value="date">Sort: Date</option>
+          <option value="amount">Sort: Amount</option>
+        </Select>
+        <button
+          onClick={() => onSortDirChange(sortDir === 'asc' ? 'desc' : 'asc')}
+          className={`${inputClass} shrink-0`}
+          aria-label="Toggle sort direction"
+          title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+        >
+          {sortDir === 'asc' ? '↑' : '↓'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -334,8 +337,8 @@ function TransactionRow({ transaction, categoryName, accountName, toAccountName,
 
   return (
     <div className="group flex items-center justify-between py-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <span className={`text-xs font-medium px-2 py-1 rounded-md shrink-0 ${categoryPillClasses(pillLabel)}`}>
+      <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 min-w-0">
+        <span className={`text-xs font-medium px-2 py-1 rounded-md min-w-0 max-w-full truncate ${categoryPillClasses(pillLabel)}`} title={pillLabel}>
           {pillLabel}
         </span>
         <div className="min-w-0">

@@ -21,7 +21,7 @@ export default function AppShell({ darkMode, onToggleDark, children }) {
   return (
     <div className="flex">
       <Sidebar darkMode={darkMode} onToggleDark={onToggleDark} />
-      <main className="flex-1 pb-16 md:pb-0 flex flex-col min-h-screen">
+      <main className="flex-1 min-w-0 pb-16 md:pb-0 flex flex-col min-h-screen">
         {/* Phase 20: gentle inactivity nudge. Owns its own fetch/eligibility
             check entirely inside ReminderBanner.jsx — this is the single
             additive line + import for that feature, nothing else in this
