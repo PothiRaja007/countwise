@@ -11,7 +11,7 @@ CountWise is a personal finance tracker built around a single idea: money should
 
 ## What it actually does
 
-- **Money Inbox** — the core loop. Type a sentence, get back parsed transaction candidates (amount, account, category, date), review and correct them, confirm, and only then are they saved.
+- **Money Inbox** — the core loop. Type a sentence, get back parsed transaction candidates (amount, account, category, date), review and correct them, confirm, and only then are they saved. It also understands questions, commands and page requests, and never turns them into transactions (see the next section).
 - **Accounts, Transactions, Goals, Budgets** — the usual ledger primitives, but with account balances always *computed* from transaction history, never stored as a separate number that can drift out of sync.
 - **Calendar & Reports** — a monthly view of activity, and exportable summaries (CSV).
 - **Learning ROI & Behavior Score** — lightweight, non-financial insight features that reflect on habits without moralizing about them.
@@ -41,6 +41,32 @@ The investigation eventually reached the point of starting a clean rebuild of th
 That observation led to the real root cause: a documented interaction between **React 18's Strict Mode** (which deliberately mounts, tears down, and remounts every component once in development, specifically to catch exactly this class of bug) and the native `<dialog>` element's `showModal()` API, which has strict internal state rules that don't tolerate being invoked twice in quick succession. The fix was small — guard the call with `if (!dialog.open)` — but finding it required treating "no error and no obvious cause" as a signal to keep investigating systematically, not a reason to guess.
 
 The lesson that stuck: **when two independent systems fail identically, stop suspecting either system individually.**
+
+## The Money Inbox command layer (phases P0 to P15)
+
+Early on, the Money Inbox treated every sentence as an expense. "Create a goal for a laptop worth 50,000" became a 50,000 expense, and "How much did I spend on food this month?" became an empty expense row. Wrong money records written from a question or a command is a real safety problem, so it was fixed as a planned, tested, phased piece of work.
+
+**What it does now.** Before anything is saved, the Money Inbox decides whether a sentence is a transaction, a command, a question, a request to open a page, or something it must ask about. Questions (spent, budget left, goal progress, balance) are answered in place and write nothing. Commands to create a goal, add to a goal, create a learning item, or set a budget are prepared by the Money Inbox and handed to the page that owns that data (Goals, Learning, Budgets), where you confirm in that page's own dialog. Salary and pension sentences produce clearly marked estimates. A sentence that mixes a command with another action is refused with "Please do one thing at a time."
+
+**Rules that never changed.**
+- The interpreter is rule-based and deterministic. It uses no AI model.
+- The review drawer is the only place the Money Inbox saves a transaction, and that code is pinned by a checksum test.
+- A pending action expires after 5 minutes, a page handoff is read once, and the short "it" memory lasts 10 minutes and is cleared on sign-out.
+- The command layer added no new database write path.
+
+**How it was built.** Sixteen phases, each with a handoff, review, approval, tests and a report. P0 froze today's behaviour as tests first, so every later phase could prove it changed nothing else. Then came the command contracts, period and name matching, the interpreter, a guard panel, read-only queries, navigation, goal, learning and budget commands, salary and pension estimates, a mixed-input guard, and end-to-end journeys. P13 was an independent audit of the whole thing. P14 and P15 fixed everything it found.
+
+**Results.**
+- 87 unit-test files, 962 checks, run in several time zones.
+- 221 browser tests (Playwright) passing across phone and desktop, light and dark.
+- Automated accessibility checks went from 92 violations at the audit to 0 on 12 pages in 4 modes.
+- 0 false commands across the 288 frozen sample sentences.
+
+**What the audit found and fixed.** Dates showing the previous day in time zones west of UTC; low colour contrast; unlabelled form controls; a same-instant double submit that could create two goals; and a parser case where "Received my salary, rent 4000" was read as one income. For the database, composite foreign keys, a category-owner check, unique names for active goals and open learning items, and a delete rule for transfers were added and verified on the live project. A duplicate name now shows a plain message instead of a database error.
+
+The full write-up is in the consolidated project report (phases P0 to P15).
+
+---
 
 ## Tech stack
 
@@ -79,13 +105,17 @@ You'll need your own Supabase project — see `supabase/schema.sql` for the full
 
 ## Known limitations
 
-- **Duplicate protection:** save buttons lock synchronously while a save runs, so a same-instant double click writes once. The database side is a reviewed, optional script (`supabase/p15_proposed_integrity.sql`) that adds ownership checks across tables and a unique rule for open goals and learning items. It is not applied automatically. Transactions have no uniqueness rule on purpose: paying the same amount twice in a day is legitimate.
+- **Duplicate protection:** save buttons lock synchronously while a save runs, so a same-instant double click writes once. The database also enforces ownership checks across tables and one active goal or open learning item per name per user (script: `supabase/p15_proposed_integrity.sql`, applied to the live project). The rule matches the same name ignoring case, so "Nuttella" and "Nuttela" count as different names. Transactions have no uniqueness rule on purpose: paying the same amount twice in a day is legitimate.
 - **Parser scope:** Money Inbox reads clauses split by commas, "and", "&" and new lines. A word such as "then" does not start a new entry. Every entry is shown on the review screen before anything is saved.
-- **Accessibility:** automated checks (axe-core) were run, and keyboard and screen-reader walkthroughs are still manual sign-off items.
+- **Accessibility:** automated checks (axe-core) pass with 0 violations on 12 pages in light and dark. Keyboard and screen-reader walkthroughs are manual sign-off items.
+- **Password strength:** leaked-password protection requires the Supabase Pro plan and is not enabled on the free tier. This is an accepted trade-off for a project with no real users and a no-cost stack.
+- **Pension:** there is no pension-paid record in the data model, so pension answers are always shown as estimates.
 
 ## What's next
 
-Optional Gemini features already exist (CTC extraction, statement help, the assist narration and the admin rule assistant). They follow one rule: AI can suggest, but nothing is written to your financial data without you reviewing and confirming it first. Money Inbox itself is rule-based and works with no AI. Remaining work is mostly manual sign-off (keyboard and screen-reader checks) and applying the optional database script.
+The Money Inbox work (P0 to P15) is complete. Optional Gemini features already exist (CTC extraction, statement help, the assist narration and the admin rule assistant). They follow one rule: AI can suggest, but nothing is written to your financial data without you reviewing and confirming it first. Money Inbox itself is rule-based and works with no AI.
+
+Deliberately deferred: a smaller main bundle (split by page), updating build-tool dependencies with dev-only advisories, a transaction idempotency key, and the manual keyboard and screen-reader sign-offs.
 
 ## Author
 
