@@ -122,7 +122,7 @@ test('Y7: saved rows come only from the review screen, are cleared on Back and o
 test('Y8: statement import and the Learning page are untouched', () => {
   assert.equal(sha(read('components/statement/StatementImportModal.jsx')), '67f4d6bd8c8524d0')
   assert.ok(!/onSaved/.test(stripComments(read('components/statement/StatementImportModal.jsx'))))
-  assert.equal(sha(read('pages/LearningROI.jsx')), 'dfacd724cc39c9a2')
+  assert.equal(sha(read('pages/LearningROI.jsx')), '82d86751a751c288') // P15b: + duplicate-name import and wrapper on two failure messages
   assert.equal(sha(read('lib/command/learningDialog.js')), '46b520b5612f2a22')
   assert.equal(sha(read('lib/command/learningCommands.js')), 'f820541dda3040c6')
 })

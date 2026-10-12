@@ -116,14 +116,23 @@ test('T5: Goals reads the handoff only through the hook, after loading, once, an
 })
 
 test('T6: the Goals page\'s own save, update, archive and reuse code is byte-for-byte what it was', () => {
-  const create = between(goals, "async ({ name, targetAmount, targetDate }) => {\n            if (atMaxActiveGoals) {", '            return null\n          }')
+  // P15b: the ONLY allowed change in these blocks is the plain-language duplicate-name wrapper on a failure message.
+  // It is removed before hashing, so the hash is still the original one, and its presence is asserted separately.
+  const unwrap = (s) => s.split("duplicateNameMessage(insertErr, 'goal') || ").join('').split("duplicateNameMessage(updateErr, 'goal') || ").join('')
+  const createRaw = between(goals, "async ({ name, targetAmount, targetDate }) => {\n            if (atMaxActiveGoals) {", '            return null\n          }')
+  assert.ok(createRaw.includes("return duplicateNameMessage(insertErr, 'goal') || \"Couldn't create this goal. Please try again.\""), 'create: duplicate-name wrapper')
+  const create = unwrap(createRaw)
   assert.equal(sha(create), '141262c37f70e7d0')
   assert.equal(create.length, 743)
-  const edit = between(goals, 'title="Edit goal"', '            return null\n          }')
+  const editRaw = between(goals, 'title="Edit goal"', '            return null\n          }')
+  assert.ok(editRaw.includes("return duplicateNameMessage(updateErr, 'goal') || \"Couldn't save these changes. Please try again.\""), 'edit: duplicate-name wrapper')
+  const edit = unwrap(editRaw)
   assert.equal(sha(edit), '328fdc3d6fa20b1e')
   const archive = between(goals, 'const handleArchive = async () => {', '\n  }\n')
   assert.equal(sha(archive), '4c75361fd50b828e')
-  const reuse = between(goals, 'const handleReuse = async (goal) => {', '\n  }\n')
+  const reuseRaw = between(goals, 'const handleReuse = async (goal) => {', '\n  }\n')
+  assert.ok(reuseRaw.includes("setActionError(duplicateNameMessage(insertErr, 'goal') || \"Couldn't start a new cycle for this goal. Please try again.\")"), 'reuse: duplicate-name wrapper')
+  const reuse = unwrap(reuseRaw)
   assert.equal(sha(reuse), '27325f44da2f892c')
   assert.equal((goalsCode.match(/\.insert\(/g) || []).length, 2, 'the same two inserts: create and reuse')
   assert.equal((goalsCode.match(/\.update\(/g) || []).length, 2, 'the same two updates: edit and archive')

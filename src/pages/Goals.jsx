@@ -13,6 +13,7 @@ import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import { duplicateNameMessage } from '../lib/duplicateName.js'
 import { useHandoff } from '../lib/useHandoff.js'
 import { remember } from '../lib/commandSession.js'
 import { goalDialogFromHandoff, pickCreatedGoal, GOAL_DIALOG_MESSAGES } from '../lib/command/goalDialog.js'
@@ -208,7 +209,7 @@ export default function Goals() {
     if (insertErr) {
       // eslint-disable-next-line no-console
       console.error(insertErr)
-      setActionError("Couldn't start a new cycle for this goal. Please try again.")
+      setActionError(duplicateNameMessage(insertErr, 'goal') || "Couldn't start a new cycle for this goal. Please try again.")
       return
     }
     await load()
@@ -316,7 +317,7 @@ export default function Goals() {
             if (insertErr) {
               // eslint-disable-next-line no-console
               console.error(insertErr)
-              return "Couldn't create this goal. Please try again."
+              return duplicateNameMessage(insertErr, 'goal') || "Couldn't create this goal. Please try again."
             }
             setCreating(false)
             await load()
@@ -341,7 +342,7 @@ export default function Goals() {
             if (updateErr) {
               // eslint-disable-next-line no-console
               console.error(updateErr)
-              return "Couldn't save these changes. Please try again."
+              return duplicateNameMessage(updateErr, 'goal') || "Couldn't save these changes. Please try again."
             }
             setEditingGoal(null)
             await load()
