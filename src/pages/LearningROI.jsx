@@ -11,6 +11,7 @@ import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import { duplicateNameMessage } from '../lib/duplicateName.js'
 import { useHandoff } from '../lib/useHandoff.js'
 import { learningDialogFromHandoff, LEARNING_DIALOG_MESSAGES } from '../lib/command/learningDialog.js'
 
@@ -206,7 +207,7 @@ export default function Learning() {
       if (updateError) {
         // eslint-disable-next-line no-console
         console.error(updateError)
-        const friendly = "Couldn't save these changes. Please try again."
+        const friendly = duplicateNameMessage(updateError, 'learning') || "Couldn't save these changes. Please try again."
         setError(friendly)
         return friendly
       }
@@ -218,7 +219,7 @@ export default function Learning() {
       if (insertError) {
         // eslint-disable-next-line no-console
         console.error(insertError)
-        const friendly = "Couldn't create this learning item. Please try again."
+        const friendly = duplicateNameMessage(insertError, 'learning') || "Couldn't create this learning item. Please try again."
         setError(friendly)
         return friendly
       }

@@ -107,6 +107,11 @@ function builder(table) {
         const clash = (Array.isArray(payload) ? payload : [payload]).some((c) => DB.budgets.some((r) => r.category_id === c.category_id && r.period_start === c.period_start))
         if (clash) return { data: null, error: { message: 'duplicate', code: '23505' } }
       }
+      // The real database refuses a second ACTIVE goal / open learning item with the same name (P15 unique indexes).
+      const dupName = (Array.isArray(payload) ? payload : [payload]).find((c) =>
+        (table === 'goals' && c.status === 'active' && DB.goals.some((r) => r.status === 'active' && String(r.name).toLowerCase() === String(c.name).toLowerCase())) ||
+        (table === 'learning_items' && c.status !== 'completed' && DB.learning_items.some((r) => r.status !== 'completed' && String(r.name).toLowerCase() === String(c.name).toLowerCase())))
+      if (dupName) return { data: null, error: { message: `duplicate key value violates unique constraint "${table === 'goals' ? 'goals_active_name_per_user' : 'learning_open_name_per_user'}"`, code: '23505' } }
       out = (Array.isArray(payload) ? payload : [payload]).map((p) => ({ id: `n${++seq}`, created_at: '2026-10-15T00:00:00Z', updated_at: '2026-10-15T00:00:00Z', ...p }))
       DB[table].push(...out)
     } else if (mode === 'update') {

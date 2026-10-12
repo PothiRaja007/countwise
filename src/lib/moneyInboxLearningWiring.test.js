@@ -111,7 +111,12 @@ test('W5: Learning reads the handoff only through the hook, after loading, once,
 test('W6: the Learning page\'s own save (insert and update) and delete code is byte-for-byte what it was', () => {
   const save = between(page, '  const handleSave = async (form) => {', '  const handleDelete = async')
   const del = between(page, '  const handleDelete = async', '  if (loading) {')
-  assert.equal(sha(save.slice(0, save.length - '  const handleDelete = async'.length)), 'f4ec119015c50272')
+  // P15b: the only allowed change is the duplicate-name wrapper on the two failure messages; remove it, then the original hash must match.
+  const saveBody = save.slice(0, save.length - '  const handleDelete = async'.length)
+  assert.ok(saveBody.includes("duplicateNameMessage(updateError, 'learning') || \"Couldn't save these changes. Please try again.\""), 'update: duplicate-name wrapper')
+  assert.ok(saveBody.includes("duplicateNameMessage(insertError, 'learning') || \"Couldn't create this learning item. Please try again.\""), 'insert: duplicate-name wrapper')
+  const unwrapped = saveBody.split("duplicateNameMessage(updateError, 'learning') || ").join('').split("duplicateNameMessage(insertError, 'learning') || ").join('')
+  assert.equal(sha(unwrapped), 'f4ec119015c50272')
   assert.equal(sha(del.slice(0, del.length - '  if (loading) {'.length)), '5df4e14a9b5defb9')
 })
 
