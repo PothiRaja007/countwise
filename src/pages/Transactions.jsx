@@ -277,14 +277,14 @@ function FilterBar({ filters, onChange, categories, accounts, sortBy, sortDir, o
         className={`${fieldClass} col-span-2 sm:flex-1 sm:min-w-[10rem]`}
       />
 
-      <Select value={filters.type} onChange={(e) => onChange({ type: e.target.value })} className={fieldClass}>
+      <Select aria-label="Type" value={filters.type} onChange={(e) => onChange({ type: e.target.value })} className={fieldClass}>
         <option value="">All types</option>
         <option value="expense">Expense</option>
         <option value="income">Income</option>
         <option value="transfer">Transfer</option>
       </Select>
 
-      <Select value={filters.categoryId} onChange={(e) => onChange({ categoryId: e.target.value })} className={fieldClass}>
+      <Select aria-label="Category" value={filters.categoryId} onChange={(e) => onChange({ categoryId: e.target.value })} className={fieldClass}>
         <option value="">All categories</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
@@ -293,7 +293,7 @@ function FilterBar({ filters, onChange, categories, accounts, sortBy, sortDir, o
         ))}
       </Select>
 
-      <Select value={filters.accountId} onChange={(e) => onChange({ accountId: e.target.value })} className={`${fieldClass} col-span-2 sm:col-span-1`}>
+      <Select aria-label="Account" value={filters.accountId} onChange={(e) => onChange({ accountId: e.target.value })} className={`${fieldClass} col-span-2 sm:col-span-1`}>
         <option value="">All accounts</option>
         {accounts.map((a) => (
           <option key={a.id} value={a.id}>
@@ -302,12 +302,12 @@ function FilterBar({ filters, onChange, categories, accounts, sortBy, sortDir, o
         ))}
       </Select>
 
-      <Input type="date" value={filters.dateFrom} onChange={(e) => onChange({ dateFrom: e.target.value })} className={`${fieldClass} font-mono`} />
+      <Input type="date" aria-label="From date" value={filters.dateFrom} onChange={(e) => onChange({ dateFrom: e.target.value })} className={`${fieldClass} font-mono`} />
       <span className="hidden sm:inline text-muted dark:text-mutedDark text-sm">to</span>
-      <Input type="date" value={filters.dateTo} onChange={(e) => onChange({ dateTo: e.target.value })} className={`${fieldClass} font-mono`} />
+      <Input type="date" aria-label="To date" value={filters.dateTo} onChange={(e) => onChange({ dateTo: e.target.value })} className={`${fieldClass} font-mono`} />
 
       <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
-        <Select value={sortBy} onChange={(e) => onSortByChange(e.target.value)} className={`${fieldClass} flex-1`}>
+        <Select aria-label="Sort by" value={sortBy} onChange={(e) => onSortByChange(e.target.value)} className={`${fieldClass} flex-1`}>
           <option value="date">Sort: Date</option>
           <option value="amount">Sort: Amount</option>
         </Select>

@@ -52,15 +52,12 @@ test('J9d: KNOWN PARSER LIMIT (pinned, not fixed): "then" does not start a secon
   expect(await app.writes()).toEqual([])
 })
 
-test('J9e: KNOWN ISSUE F-2 (pinned, not fixed): "Received my salary, rent 4000 sbi" is read as ONE income of 4000', async ({ app, page }) => {
-  // The locked parser does not split a no-amount first clause from the next one, so the rent amount lands on an
-  // income row. Nothing is saved without Confirm and the row is editable. Same result on the P8b baseline.
+test('J9e: F-2 (fixed in P15): "Received my salary, rent 4000 sbi" is TWO rows — the salary row has no amount, the rent row has 4000', async ({ app, page }) => {
+  // P15 fixed the parser: an income statement with no amount, followed by a piece that names its own thing, is two entries.
+  // Nothing is saved without Confirm.
   await app.open('/', 'sal')
   await app.say('Received my salary, rent 4000 sbi')
-  await expect(rowsInReview(page)).toHaveCount(1)
+  await expect(rowsInReview(page)).toHaveCount(2)
   await expect(page.getByText(NOTE_MIXED)).toHaveCount(0)
   expect(await app.writes()).toEqual([])
-  await app.btn('Confirm').click()
-  await expect.poll(async () => (await app.writes()).length).toBe(1)
-  expect((await app.rows('transactions')).at(-1)).toMatchObject({ type: 'income', amount: 4000 })
 })

@@ -212,7 +212,7 @@ export default function Reports() {
           Export this period's transactions (CSV)
         </Button>
       </div>
-      <div className="mt-3 overflow-x-auto">
+      <div className="mt-3 overflow-x-auto" role="region" tabIndex={0} aria-label="Summary table, scrolls sideways on small screens">
         <table className="w-full min-w-[20rem] text-sm">
           <tbody className="divide-y divide-line dark:divide-lineDark">
             <tr>
@@ -236,7 +236,7 @@ export default function Reports() {
         {categoryBreakdown.length === 0 ? (
           <EmptyState message="No expense data in this period." className="py-6" />
         ) : (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto" role="region" tabIndex={0} aria-label="Category spending table, scrolls sideways on small screens">
             <table className="w-full min-w-[24rem] text-sm">
               <thead>
                 <tr>{th('Category')}{th('Spent')}{th('% of expenses')}</tr>
@@ -264,7 +264,7 @@ export default function Reports() {
         {accountActivity.length === 0 ? (
           <EmptyState message="No accounts yet." className="py-6" />
         ) : (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto" role="region" tabIndex={0} aria-label="Account activity table, scrolls sideways on small screens">
             <table className="w-full min-w-[26rem] text-sm">
               <thead>
                 <tr>{th('Account')}{th('Balance')}{th('Transactions this period')}</tr>
@@ -291,7 +291,7 @@ export default function Reports() {
         {goalRows.length === 0 ? (
           <EmptyState message="Nothing you're saving toward yet." className="py-6" />
         ) : (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto" role="region" tabIndex={0} aria-label="Goal allocations table, scrolls sideways on small screens">
             <table className="w-full min-w-[32rem] text-sm">
               <thead>
                 <tr>{th('Goal')}{th('Target')}{th('Progress')}{th('% complete')}</tr>
@@ -319,7 +319,7 @@ export default function Reports() {
         {budgetRows.length === 0 ? (
           <EmptyState message="No budgets set yet." className="py-6" />
         ) : (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto" role="region" tabIndex={0} aria-label="Budget performance table, scrolls sideways on small screens">
             <table className="w-full min-w-[36rem] text-sm">
               <thead>
                 <tr>{th('Category')}{th('Month')}{th('Spent')}{th('Remaining')}{th('% used')}</tr>

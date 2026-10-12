@@ -4,6 +4,7 @@ import { saveBudgetRow } from '../../lib/budgetSave.js'
 import { formatCurrency } from '../../lib/format.js'
 import { categoryPillClasses } from '../../lib/categoryColors.js'
 import { friendlyError } from '../../lib/errorMessages.js'
+import { dateFromISO } from '../../lib/isoDate.js'
 import ValueBadge from '../ui/ValueBadge.jsx'
 import Button from '../ui/Button.jsx'
 import Input from '../ui/Input.jsx'
@@ -85,7 +86,7 @@ export default function BudgetRecipeFlow({ userId, incomeType, categories, categ
   }, [busy])
 
   const { period_start: targetPeriodStart, period_end: targetPeriodEnd } = useMemo(() => monthRangeFor(targetMonth), [targetMonth])
-  const monthLabel = useMemo(() => new Date(targetPeriodStart).toLocaleDateString('en-IN', { month: 'long' }), [targetPeriodStart])
+  const monthLabel = useMemo(() => dateFromISO(targetPeriodStart).toLocaleDateString('en-IN', { month: 'long' }), [targetPeriodStart])
 
   const categoryNameById = useMemo(() => {
     const map = new Map()

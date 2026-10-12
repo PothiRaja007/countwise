@@ -11,6 +11,7 @@ import MoneyInboxInput from '../components/money-inbox/MoneyInboxInput.jsx'
 import Button from '../components/ui/Button.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import { dateFromISO } from '../lib/isoDate.js'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -255,7 +256,7 @@ export default function Calendar() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-medium">
-                {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                {dateFromISO(selectedDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
               </h2>
               <Button
                 variant="text"

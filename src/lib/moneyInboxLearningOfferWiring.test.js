@@ -147,7 +147,7 @@ test('Y10: the locked files are byte-for-byte what they were', () => {
     'lib/command/interpreter.js': 'ea8273109afea4f9', 'lib/command/guardView.js': '227b98b090331a63', 'lib/command/handoff.js': '729b0d35a5a0d999',
     'lib/commandSession.js': '41bd5a720a25ae56', 'lib/useHandoff.js': 'a5771b309e68f7ac', 'lib/budgetRecipe.js': 'cc273e25d97dad28',
     'lib/budgetSave.js': 'e2499dfb17cba90d', 'lib/budgetEngine.js': '50142395b7358185', 'pages/Budgets.jsx': '140aa62c8e126b15',
-    'components/budgets/BudgetRecipeFlow.jsx': '2083d5d76e8156d9',
+    'components/budgets/BudgetRecipeFlow.jsx': '3b0f3a7bd0d82939',
   }
   for (const [file, expected] of Object.entries(pins)) assert.equal(sha(read(file)), expected, file)
 })

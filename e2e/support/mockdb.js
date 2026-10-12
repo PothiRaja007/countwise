@@ -17,8 +17,8 @@ function seed(kindList) {
     accounts: [row({ id: 'a1', name: 'SBI', type: 'bank', is_active: true, })],
     categories: [cat('c1', 'Food', 'expense'), cat('c2', 'Food delivery', 'expense'), cat('c3', 'Rent', 'expense'), cat('c5', 'Travel', 'expense'), cat('c6', 'Learning', 'expense'), cat('c4', 'Salary', 'income')],
     category_rules: [
-      { keyword: 'rent', category_id: 'c3', priority: 1 }, { keyword: 'travel', category_id: 'c5', priority: 1 }, { keyword: 'fuel', category_id: 'c5', priority: 1 },
-      { keyword: 'food', category_id: 'c1', priority: 1 }, { keyword: 'dinner', category_id: 'c1', priority: 1 }, { keyword: 'course', category_id: 'c6', priority: 1 }, { keyword: 'salary', category_id: 'c4', priority: 1 },
+      { id: 'r1', keyword: 'rent', category_id: 'c3', priority: 1 }, { id: 'r2', keyword: 'travel', category_id: 'c5', priority: 1 }, { id: 'r3', keyword: 'fuel', category_id: 'c5', priority: 1 },
+      { id: 'r4', keyword: 'food', category_id: 'c1', priority: 1 }, { id: 'r5', keyword: 'dinner', category_id: 'c1', priority: 1 }, { id: 'r6', keyword: 'course', category_id: 'c6', priority: 1 }, { id: 'r7', keyword: 'salary', category_id: 'c4', priority: 1 },
     ],
     budgets: [bud('b1', 'c3', 4500, '2026-10', '31'), bud('b2', 'c5', 1000, '2026-10', '31'), bud('b4', 'c2', 800, '2026-10', '31')],
     learning_items: [], goals: [], goal_contributions: [],

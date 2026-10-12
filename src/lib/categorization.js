@@ -378,6 +378,21 @@ export function splitClauses(text) {
   // A fragment that just says HOW it was paid ("paid via wallet", "from bank") belongs to the event BEFORE it.
   const isPaymentFragment = (t) => /^(?:paid|paying|pay|payment|via|using|through|by|from)\b/i.test(t)
 
+  // F-2 (P15): "Received my salary, rent 4000 sbi". The first piece says income and has no amount;
+  // the next piece has an amount AND names its own thing ("rent") with no verb of its own, so it is
+  // a separate entry, not the amount of the salary. "Received my salary, 25000" (no description) and
+  // "Received my salary, bonus 5000" (also income) are NOT split and read exactly as before.
+  const CURRENCY_WORD = /^(?:rs\.?|inr|₹|of|for|about|around|approx\.?|like)$/i
+  const ownsDescription = (t) => {
+    const lead = t.split(/\d/)[0].split(/\s+/).filter((w) => w && !CURRENCY_WORD.test(w))
+    return lead.length > 0
+  }
+  const incomeThenOwnEntry = (fragment, next) => {
+    if (explicitType(fragment) !== 'income') return false
+    const d = detectType(next, { hasAmount: true })
+    return d.type === 'expense' && d.assumed === true && ownsDescription(next)
+  }
+
   const groups = [] // each: array of pieces forming one clause
   let pending = [] // amount-less fragments waiting for the piece that follows
   const standalone = (frags) => frags.forEach((f) => groups.push([f]))
@@ -385,7 +400,7 @@ export function splitClauses(text) {
   for (const piece of pieces) {
     if (parseAmount(piece.text) !== null) {
       const front = []
-      for (const f of pending) (conflicts(f.text, piece.text) ? standalone([f]) : front.push(f))
+      for (const f of pending) (conflicts(f.text, piece.text) || incomeThenOwnEntry(f.text, piece.text) ? standalone([f]) : front.push(f))
       pending = []
       groups.push([...front, piece])
     } else if (isPaymentFragment(piece.text) && groups.length > 0 && !conflicts(piece.text, joined(groups[groups.length - 1]))) {

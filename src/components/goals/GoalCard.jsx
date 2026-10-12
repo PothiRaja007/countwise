@@ -1,5 +1,6 @@
 import { Archive, RotateCcw, Pencil, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react'
 import { formatCurrency } from '../../lib/format.js'
+import { dateFromISO } from '../../lib/isoDate.js'
 import { suggestedMonthlyPace, goalStatusLabel, progressPercent } from '../../lib/goalEngine.js'
 
 // Status badge copy — per §36, "overdue" must never render as "failed."
@@ -19,7 +20,7 @@ const STATUS_CLASSES = {
 
 function formatTargetDate(dateStr) {
   if (!dateStr) return null
-  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return dateFromISO(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export default function GoalCard({ goal, currentProgress, opportunity, onContribute, onWithdraw, onEdit, onArchive, onReuse }) {

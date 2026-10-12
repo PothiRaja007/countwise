@@ -12,6 +12,7 @@ import ErrorState from '../components/layout/ErrorState.jsx'
 import MoneyInboxInput from '../components/money-inbox/MoneyInboxInput.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
+import { dateFromISO } from '../lib/isoDate.js'
 
 const RHYTHM_PERIODS = [
   { key: '7D', label: '7D', days: 7 },
@@ -59,7 +60,7 @@ function sampleDates(days, maxPoints = 10) {
 function dateLabel(isoDate, todayISO, yesterdayISO) {
   if (isoDate === todayISO) return 'Today'
   if (isoDate === yesterdayISO) return 'Yesterday'
-  const d = new Date(isoDate)
+  const d = dateFromISO(isoDate)
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
@@ -156,7 +157,7 @@ export default function Overview() {
     const dates = sampleDates(period.days)
     return dates.map((isoDate) => ({
       date: isoDate,
-      label: new Date(isoDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+      label: dateFromISO(isoDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
       balance: totalBalance(
         transactions.filter((t) => t.transaction_date <= isoDate),
         accounts

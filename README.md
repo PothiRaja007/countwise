@@ -79,13 +79,13 @@ You'll need your own Supabase project — see `supabase/schema.sql` for the full
 
 ## Known limitations
 
-- **One-income parsing:** a sentence such as "Received my salary, rent 4000 sbi" is read as a single income of 4000, not as two entries. The review screen always shows the row before anything is saved, so nothing is recorded wrongly without the user seeing it. The parser is locked by tests; this is documented, not fixed.
-- **Duplicate protection is on the screen only:** save buttons lock while a save is running, but the database has no uniqueness rule for goals, transactions or learning items.
+- **Duplicate protection:** save buttons lock synchronously while a save runs, so a same-instant double click writes once. The database side is a reviewed, optional script (`supabase/p15_proposed_integrity.sql`) that adds ownership checks across tables and a unique rule for open goals and learning items. It is not applied automatically. Transactions have no uniqueness rule on purpose: paying the same amount twice in a day is legitimate.
+- **Parser scope:** Money Inbox reads clauses split by commas, "and", "&" and new lines. A word such as "then" does not start a new entry. Every entry is shown on the review screen before anything is saved.
 - **Accessibility:** automated checks (axe-core) were run, and keyboard and screen-reader walkthroughs are still manual sign-off items.
 
 ## What's next
 
-CountWise's next planned phase (V1.3) introduces AI assistance for two specific things: interpreting uploaded CTC/offer-letter documents, and eventually a fallback parser for Money Inbox inputs the deterministic parser can't handle. Both are designed around the same non-negotiable rule the rest of the app already follows: AI can suggest, but nothing gets written to your financial data without you reviewing and confirming it first.
+Optional Gemini features already exist (CTC extraction, statement help, the assist narration and the admin rule assistant). They follow one rule: AI can suggest, but nothing is written to your financial data without you reviewing and confirming it first. Money Inbox itself is rule-based and works with no AI. Remaining work is mostly manual sign-off (keyboard and screen-reader checks) and applying the optional database script.
 
 ## Author
 
