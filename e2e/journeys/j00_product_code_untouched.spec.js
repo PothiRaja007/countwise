@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const manifest = JSON.parse(readFileSync(path.join(root, 'e2e/support/p15-src-manifest.json'), 'utf8'))
+const manifest = JSON.parse(readFileSync(path.join(root, 'e2e/support/p16-src-manifest.json'), 'utf8'))
 
 function hashTree(dir, out = {}) {
   for (const name of readdirSync(path.join(root, dir)).sort()) {
