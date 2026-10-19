@@ -128,8 +128,29 @@ Snapshot table for future performance optimization. **Not read from in v1** — 
 | stars | numeric | 1.0–5.0 |
 | flag_ids | uuid[] | flags that fed this score |
 
+## debts (Debt module, D2)
+Added after v1. Holds the user's **opening figures** and the loan terms. Nothing here is a current balance. The current outstanding amount, interest paid, payoff date and repayment plans are always calculated by `src/lib/debtEngine.js`, the same principle as account balance and goal progress. A debt is not an account and never enters total balance.
+| column | type | notes |
+|---|---|---|
+| id | uuid pk | unique together with user_id (`debts_id_user_key`), so a later payment link can prove it belongs to the same user |
+| user_id | uuid | references auth.users, cascades on account deletion |
+| name | text | required, 80 characters at most; unique per user among active debts, ignoring case (`debts_active_name_per_user`) |
+| kind | text | 'term_loan' \| 'interest_free' \| 'credit_card'. A credit card is always shown as an estimate |
+| lender | text | optional, display only |
+| as_of_date | date | the date the two opening figures are true |
+| as_of_outstanding | numeric | PRINCIPAL still owed on as_of_date; 0 means already cleared; at most 2 decimals |
+| as_of_accrued_interest | numeric | interest owed but unpaid on as_of_date; default 0 (none known); at most 2 decimals |
+| annual_rate_pct | numeric | 0 to 100, at most 2 decimals, no default; must be exactly 0 when kind is 'interest_free' |
+| monthly_payment | numeric | optional; lender EMI or the user's chosen payment; above 0 |
+| remaining_months | integer | optional, 1 to 600; months left ON as_of_date, a snapshot that is never counted down |
+| due_day | integer | optional, 1 to 31; short months use their last day |
+| status | text | 'active' \| 'closed'; a closed debt is kept for history |
+| created_at / updated_at | timestamptz | updated_at is set by the app |
+
+RLS: one policy, `own debts`, for all commands, to signed-in users only (`auth.uid() = user_id` for both reading and writing). Debt payments and their link to transactions are not part of this table; they are planned for D4. Standalone script with pre-flight checks and rollback: `supabase/p16_debts.sql`.
+
 ## Notes
-- No `credit_cards` table in v1 — permanently excluded, not deferred to v2.
+- No `credit_cards` ACCOUNT table in v1 — permanently excluded, not deferred to v2. Since the Debt module, a credit card can exist only as a `debts` row of kind 'credit_card': a labelled estimate, never an account and never part of total balance.
 - No `currency` column anywhere in v1 — single implicit currency.
 - Money Inbox parsing is rule-based and deterministic (`src/lib/dateParser.js`, `src/lib/categorization.js`) and works with no AI. The app also has a few optional, disclosed Gemini features (for example CTC document extraction, bank-statement help, the financial assist narration and the admin rule assistant), called through Supabase edge functions. AI only suggests; nothing is written to financial data without the user reviewing and confirming it. See the in-app AI notice page.
 - Behavior score computation and flag detection run client-side against `transactions` + `goals` + `goal_contributions` + `learning_items`; only the result would be persisted to `behavior_scores`/`behavior_flags` (not yet wired up).

@@ -899,3 +899,62 @@ begin
       using (exists (select 1 from admin_users where user_id = auth.uid()));
   end if;
 end $$;
+
+-- ============================================
+-- D2: Debt module data model - debts
+-- ============================================
+-- Repeatable reference form of supabase/p16_debts.sql (that file is the standalone, strict version with the
+-- pre-flight checks, post-checks and rollback; run it, not this block, against the live project).
+-- debts holds the user's OPENING figures and the loan terms. There is deliberately no current-balance column:
+-- the current outstanding amount is calculated by src/lib/debtEngine.js, the same principle as account balance
+-- and goal progress. A debt is not an account and never enters total balance. Debt payments and their link to
+-- transactions are not part of D2 (planned for D4).
+create table if not exists debts (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  kind text not null,
+  lender text,
+  as_of_date date not null,
+  as_of_outstanding numeric not null,
+  as_of_accrued_interest numeric not null default 0,
+  annual_rate_pct numeric not null,
+  monthly_payment numeric,
+  remaining_months integer,
+  due_day integer,
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint debts_name_valid check (btrim(name) <> '' and char_length(name) <= 80),
+  constraint debts_kind_valid check (kind in ('term_loan', 'interest_free', 'credit_card')),
+  constraint debts_lender_valid check (lender is null or char_length(lender) <= 80),
+  constraint debts_as_of_outstanding_valid check (
+    as_of_outstanding >= 0 and as_of_outstanding <= 100000000000 and as_of_outstanding = round(as_of_outstanding, 2)),
+  constraint debts_as_of_accrued_interest_valid check (
+    as_of_accrued_interest >= 0 and as_of_accrued_interest <= 100000000000 and as_of_accrued_interest = round(as_of_accrued_interest, 2)),
+  constraint debts_annual_rate_pct_valid check (
+    annual_rate_pct >= 0 and annual_rate_pct <= 100 and annual_rate_pct = round(annual_rate_pct, 2)),
+  constraint debts_monthly_payment_valid check (
+    monthly_payment is null or (monthly_payment > 0 and monthly_payment <= 100000000000 and monthly_payment = round(monthly_payment, 2))),
+  constraint debts_remaining_months_valid check (remaining_months is null or remaining_months between 1 and 600),
+  constraint debts_due_day_valid check (due_day is null or due_day between 1 and 31),
+  constraint debts_status_valid check (status in ('active', 'closed')),
+  constraint debts_interest_free_rate_zero check (kind <> 'interest_free' or annual_rate_pct = 0),
+  constraint debts_id_user_key unique (id, user_id)
+);
+
+create unique index if not exists debts_active_name_per_user on debts (user_id, lower(name)) where status = 'active';
+
+alter table debts enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where tablename = 'debts' and policyname = 'own debts'
+  ) then
+    create policy "own debts" on debts for all to authenticated
+      using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  end if;
+end $$;
