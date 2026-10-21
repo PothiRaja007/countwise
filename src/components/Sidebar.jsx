@@ -50,6 +50,7 @@ const BASE_GROUPS = [
     links: [
       { to: '/goals', label: 'Goals', icon: Target },
       { to: '/budgets', label: 'Budgets', icon: PiggyBank },
+      { to: '/debts', label: 'Debts', icon: Landmark },
     ],
   },
   {

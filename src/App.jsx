@@ -22,6 +22,7 @@ const Behavior = lazy(() => import('./pages/Behavior.jsx'))
 const Charts = lazy(() => import('./pages/Charts.jsx'))
 const Calendar = lazy(() => import('./pages/Calendar.jsx'))
 const Budgets = lazy(() => import('./pages/Budgets.jsx'))
+const Debts = lazy(() => import('./pages/Debts.jsx'))
 const Reports = lazy(() => import('./pages/Reports.jsx'))
 const Settings = lazy(() => import('./pages/Settings.jsx'))
 const CTCExplorer = lazy(() => import('./pages/CTCExplorer.jsx'))
@@ -175,6 +176,7 @@ function AppInner() {
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/budgets" element={<Budgets />} />
+        <Route path="/debts" element={<Debts />} />
         <Route path="/learning" element={<LearningROI />} />
         <Route path="/money-options" element={<MoneyOptions />} />
         <Route path="/admin/rules" element={<AdminRuleAssistant />} />
