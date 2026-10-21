@@ -36,6 +36,7 @@ import { useInstallState } from '../lib/installPrompt.js'
 const LINKS_BEFORE_WORK = [
   { to: '/calendar', label: 'Calendar', icon: Calendar },
   { to: '/budgets', label: 'Budgets', icon: PiggyBank },
+  { to: '/debts', label: 'Debts', icon: Landmark },
 ]
 
 // Phase 23.4: same three placeholder routes as Sidebar.jsx's WORK_GROUP —

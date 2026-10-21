@@ -149,6 +149,8 @@ Added after v1. Holds the user's **opening figures** and the loan terms. Nothing
 
 RLS: one policy, `own debts`, for all commands, to signed-in users only (`auth.uid() = user_id` for both reading and writing). Debt payments and their link to transactions are not part of this table; they are planned for D4. Standalone script with pre-flight checks and rollback: `supabase/p16_debts.sql`.
 
+Used by the Debts screen (D3, `/debts`): it adds, edits, closes and reopens debts and exports them to CSV. It never deletes a row and never writes any other table. Closing sets status to 'closed'; reopening sets it back to 'active'.
+
 ## Notes
 - No `credit_cards` ACCOUNT table in v1 — permanently excluded, not deferred to v2. Since the Debt module, a credit card can exist only as a `debts` row of kind 'credit_card': a labelled estimate, never an account and never part of total balance.
 - No `currency` column anywhere in v1 — single implicit currency.

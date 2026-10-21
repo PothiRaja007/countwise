@@ -21,7 +21,7 @@ function seed(kindList) {
       { id: 'r4', keyword: 'food', category_id: 'c1', priority: 1 }, { id: 'r5', keyword: 'dinner', category_id: 'c1', priority: 1 }, { id: 'r6', keyword: 'course', category_id: 'c6', priority: 1 }, { id: 'r7', keyword: 'salary', category_id: 'c4', priority: 1 },
     ],
     budgets: [bud('b1', 'c3', 4500, '2026-10', '31'), bud('b2', 'c5', 1000, '2026-10', '31'), bud('b4', 'c2', 800, '2026-10', '31')],
-    learning_items: [], goals: [], goal_contributions: [],
+    learning_items: [], goals: [], goal_contributions: [], debts: [],
     transactions: [
       row({ id: 't1', type: 'income', amount: 100000, account_id: 'a1', to_account_id: null, category_id: 'c4', transaction_date: '2026-09-01', description: 't1', original_input: 't1' }),
       row({ id: 't2', type: 'expense', amount: 5000, account_id: 'a1', to_account_id: null, category_id: 'c1', transaction_date: '2026-10-01', description: 't2', original_input: 't2' }),
@@ -48,6 +48,15 @@ function seed(kindList) {
     db.goals.push(row({ id: 'g1', name: 'Laptop', target_amount: 50000, target_date: '2026-12-31', status: 'active' }))
     db.goal_contributions.push(row({ id: 'k1', goal_id: 'g1', account_id: 'a1', amount: 3000, type: 'contribution', contribution_date: '2026-10-02' }))
   }
+  // D3: the debts table. 'debt' = one active loan and one closed debt; 'debt20' = twenty active debts (the UI limit).
+  const debt = (o) => row({ kind: 'term_loan', lender: null, as_of_date: '2026-10-01', as_of_outstanding: 100000, as_of_accrued_interest: 0, annual_rate_pct: 10, monthly_payment: null, remaining_months: null, due_day: null, status: 'active', ...o })
+  if (has('debt')) {
+    db.debts.push(
+      debt({ id: 'd1', name: 'Education loan', lender: 'SBI', as_of_outstanding: 250000, annual_rate_pct: 9.5, monthly_payment: 5000, remaining_months: 60, due_day: 5 }),
+      debt({ id: 'd2', name: 'Old phone EMI', kind: 'interest_free', as_of_outstanding: 0, annual_rate_pct: 0, status: 'closed' }),
+    )
+  }
+  if (has('debt20')) for (let i = 1; i <= 20; i++) db.debts.push(debt({ id: `m${i}`, name: `Debt ${i}`, as_of_outstanding: 1000 * i }))
   return db
 }
 
@@ -112,10 +121,19 @@ function builder(table) {
         (table === 'goals' && c.status === 'active' && DB.goals.some((r) => r.status === 'active' && String(r.name).toLowerCase() === String(c.name).toLowerCase())) ||
         (table === 'learning_items' && c.status !== 'completed' && DB.learning_items.some((r) => r.status !== 'completed' && String(r.name).toLowerCase() === String(c.name).toLowerCase())))
       if (dupName) return { data: null, error: { message: `duplicate key value violates unique constraint "${table === 'goals' ? 'goals_active_name_per_user' : 'learning_open_name_per_user'}"`, code: '23505' } }
+      // D3: the same refusal for a second ACTIVE debt with the same name (debts_active_name_per_user, supabase/p16_debts.sql).
+      if ((Array.isArray(payload) ? payload : [payload]).some((c) => table === 'debts' && c.status === 'active' && DB.debts.some((r) => r.status === 'active' && String(r.name).toLowerCase() === String(c.name).toLowerCase()))) {
+        return { data: null, error: { message: 'duplicate key value violates unique constraint "debts_active_name_per_user"', code: '23505' } }
+      }
       out = (Array.isArray(payload) ? payload : [payload]).map((p) => ({ id: `n${++seq}`, created_at: '2026-10-15T00:00:00Z', updated_at: '2026-10-15T00:00:00Z', ...p }))
       DB[table].push(...out)
     } else if (mode === 'update') {
-      out = DB[table].filter((r) => filters.every((f) => f(r))); out.forEach((r) => Object.assign(r, payload))
+      out = DB[table].filter((r) => filters.every((f) => f(r)))
+      // D3: an update may not leave two ACTIVE debts with the same name (renaming one, or reopening a closed one).
+      if (table === 'debts' && out.some((r) => { const n = { ...r, ...payload }; return n.status === 'active' && DB.debts.some((o) => o !== r && o.status === 'active' && String(o.name).toLowerCase() === String(n.name).toLowerCase()) })) {
+        return { data: null, error: { message: 'duplicate key value violates unique constraint "debts_active_name_per_user"', code: '23505' } }
+      }
+      out.forEach((r) => Object.assign(r, payload))
     } else if (mode === 'delete') {
       out = DB[table].filter((r) => filters.every((f) => f(r))); DB[table] = DB[table].filter((r) => !filters.every((f) => f(r)))
     }
