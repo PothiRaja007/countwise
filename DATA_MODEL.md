@@ -154,3 +154,20 @@ RLS: one policy, `own debts`, for all commands, to signed-in users only (`auth.u
 - No `currency` column anywhere in v1 — single implicit currency.
 - Money Inbox parsing is rule-based and deterministic (`src/lib/dateParser.js`, `src/lib/categorization.js`) and works with no AI. The app also has a few optional, disclosed Gemini features (for example CTC document extraction, bank-statement help, the financial assist narration and the admin rule assistant), called through Supabase edge functions. AI only suggests; nothing is written to financial data without the user reviewing and confirming it. See the in-app AI notice page.
 - Behavior score computation and flag detection run client-side against `transactions` + `goals` + `goal_contributions` + `learning_items`; only the result would be persisted to `behavior_scores`/`behavior_flags` (not yet wired up).
+
+## debt_payments (Debt module, D4a)
+Added after the `debts` table (see above). A row says "this expense transaction is a payment toward this debt". It stores **no amount and no date**: the app reads both live from the linked transaction, so balances still come from transactions only. Creating a link does not create, change or delete a transaction and does not touch any balance (the money left the account when the transaction was recorded). A debt is still not an account and never part of total balance.
+| column | type | notes |
+|---|---|---|
+| id | uuid pk | |
+| user_id | uuid | references auth.users, cascades on account deletion |
+| debt_id | uuid | with user_id, references `debts (id, user_id)`, so a link can only point at the same user's debt; deleting the debt deletes its links |
+| transaction_id | uuid | with user_id, references `transactions (id, user_id)`, so a link can only point at the same user's transaction; deleting the transaction deletes its link and the debt recalculates. Unique (`debt_payments_transaction_id_key`): one transaction is a payment toward at most one debt, once |
+| created_at | timestamptz | |
+
+- **Whole transactions only:** a transaction is linked in full to one debt. There are no partial amounts and no splits.
+- **Expense only:** a trigger (`debt_payments_expense_only`, function `check_debt_payment_expense`) refuses a link to income or a transfer when the link is created or re-pointed. It does not watch the transactions table: if a linked expense is later edited into income or a transfer, the link stays and the app shows it as "not counted" with an Unlink action.
+- **Existing table touched:** `transactions` gains one constraint, `transactions_id_user_key unique (id, user_id)`. The id is already the primary key, so it can never fail on existing data. It exists only so the composite foreign key above works (same pattern as `accounts_id_user_key` and `goals_id_user_key`). No column, policy or trigger of `transactions` changes.
+- RLS: one policy, `own debt payments`, for all commands, to signed-in users only (`auth.uid() = user_id` for both reading and writing).
+- Index on `debt_id` for the per-debt list.
+- Applied by `supabase/p17_debt_payments.sql` (standalone, with pre-flight checks, post-checks and a rollback). The screen that uses the table is a later stage (D4b).

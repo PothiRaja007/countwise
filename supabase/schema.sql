@@ -958,3 +958,66 @@ begin
       using (auth.uid() = user_id) with check (auth.uid() = user_id);
   end if;
 end $$;
+
+-- ============================================
+-- D4a: Debt module data model - debt_payments
+-- ============================================
+-- Repeatable reference form of supabase/p17_debt_payments.sql (that file is the standalone, strict version with the
+-- pre-flight checks, post-checks and rollback; run it, not this block, against the live project).
+-- A row links ONE expense transaction to ONE debt as a payment. It stores no amount and no date: the app reads both
+-- from the transaction, so balances still come from transactions only. A link changes no transaction and no balance.
+-- Deleting a transaction or a debt deletes its links. Requires the debts block above.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'transactions_id_user_key') then
+    alter table transactions add constraint transactions_id_user_key unique (id, user_id);
+  end if;
+end $$;
+
+create table if not exists debt_payments (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  debt_id uuid not null,
+  transaction_id uuid not null,
+  created_at timestamptz not null default now(),
+  constraint debt_payments_debt_user_fkey
+    foreign key (debt_id, user_id) references debts (id, user_id) on delete cascade,
+  constraint debt_payments_transaction_user_fkey
+    foreign key (transaction_id, user_id) references transactions (id, user_id) on delete cascade,
+  constraint debt_payments_transaction_id_key unique (transaction_id)
+);
+
+create index if not exists debt_payments_debt_id_idx on debt_payments (debt_id);
+
+create or replace function public.check_debt_payment_expense() returns trigger
+language plpgsql set search_path = public as $$
+declare
+  t text;
+begin
+  select tx.type into t from transactions tx where tx.id = new.transaction_id and tx.user_id = new.user_id;
+  if found and t <> 'expense' then
+    raise exception 'a debt payment must be an expense transaction' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'debt_payments_expense_only' and tgrelid = 'public.debt_payments'::regclass) then
+    create trigger debt_payments_expense_only before insert or update of transaction_id, user_id on debt_payments
+      for each row execute function public.check_debt_payment_expense();
+  end if;
+end $$;
+
+alter table debt_payments enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where tablename = 'debt_payments' and policyname = 'own debt payments'
+  ) then
+    create policy "own debt payments" on debt_payments for all to authenticated
+      using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  end if;
+end $$;
