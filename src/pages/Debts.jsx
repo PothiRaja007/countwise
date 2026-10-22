@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { X, Plus, Download } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../lib/AuthContext.jsx'
@@ -6,12 +6,18 @@ import PageHeader from '../components/layout/PageHeader.jsx'
 import ErrorState from '../components/layout/ErrorState.jsx'
 import DebtCard from '../components/debts/DebtCard.jsx'
 import DebtFormModal from '../components/debts/DebtFormModal.jsx'
+import PaymentsModal from '../components/debts/PaymentsModal.jsx'
+import LinkPaymentsModal from '../components/debts/LinkPaymentsModal.jsx'
 import Button from '../components/ui/Button.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
 import { duplicateNameMessage } from '../lib/duplicateName.js'
 import { ACTIVE_DEBT_LIMIT, rowToForm, todayISO } from '../lib/debtForm.js'
-import { buildDebtsCsv } from '../lib/debtExport.js'
+import { buildDebtsCsv, buildDebtPaymentsCsv } from '../lib/debtExport.js'
+import {
+  readAllPages, readByIds, collectUnlinked, annotateLinks, computeDebtFigures, quietMonths, paymentsExportRows, paymentErrorMessage,
+  DUPLICATE_LINK_MESSAGE, MISSING_MESSAGE, NOT_EXPENSE_MESSAGE,
+} from '../lib/debtPayments.js'
 
 const TABS = [
   { key: 'active', label: 'Active' },
@@ -20,8 +26,9 @@ const TABS = [
 
 const COLUMNS = 'id, name, kind, lender, as_of_date, as_of_outstanding, as_of_accrued_interest, annual_rate_pct, monthly_payment, remaining_months, due_day, status, created_at, updated_at'
 
-// D3 - the Debts screen. A debt is not an account: nothing here touches transactions, balances or goals. It reads and
-// writes only the `debts` table, and every write follows a button press.
+// D3 + D4b - the Debts screen. A debt is not an account: nothing here creates, edits or deletes a transaction, and no
+// balance or goal is touched. It writes only `debts` (D3) and `debt_payments` (D4b: link / unlink a payment), and
+// every write follows a button press. Transactions are only READ, to get the amount and date of a linked payment.
 export default function Debts() {
   const { user, profile } = useAuth()
   const [loading, setLoading] = useState(true)
@@ -31,6 +38,41 @@ export default function Debts() {
   const [activeTab, setActiveTab] = useState('active')
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(null)
+  // D4b: the links, the transactions they point at, and the open dialogs.
+  const [links, setLinks] = useState(null) // null until the links have been read
+  const [txById, setTxById] = useState(() => new Map())
+  const [accountNames, setAccountNames] = useState(() => new Map())
+  const [paymentsError, setPaymentsError] = useState(null)
+  const [today, setToday] = useState(() => todayISO())
+  const [paymentsDebtId, setPaymentsDebtId] = useState(null)
+  const [linkData, setLinkData] = useState(null) // the picker: { debtId, candidates, more, categoryNames }
+  const writing = useRef(false) // one link / unlink write at a time (a double click or a second tab cannot double up)
+
+  const failPayments = (err) => {
+    // eslint-disable-next-line no-console
+    console.error(err)
+    setPaymentsError("Couldn't load your linked payments. The opening figures are shown without them.")
+    return null
+  }
+
+  // Read the links, then the transactions they point at (at most 100 ids per request), then the account names.
+  const loadPayments = async () => {
+    const t = todayISO()
+    const linkRes = await readAllPages((from, to) =>
+      supabase.from('debt_payments').select('id, debt_id, transaction_id, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, to))
+    if (linkRes.error) return failPayments(linkRes.error)
+    const txRes = await readByIds((ids) =>
+      supabase.from('transactions').select('id, type, amount, transaction_date, description, account_id').eq('user_id', user.id).in('id', ids), linkRes.data.map((l) => l.transaction_id))
+    if (txRes.error) return failPayments(txRes.error)
+    const accRes = await readAllPages((from, to) => supabase.from('accounts').select('id, name').eq('user_id', user.id).order('id', { ascending: true }).range(from, to))
+    if (accRes.error) return failPayments(accRes.error)
+    setTxById(new Map(txRes.data.map((r) => [r.id, r])))
+    setAccountNames(new Map(accRes.data.map((a) => [a.id, a.name])))
+    setLinks(linkRes.data)
+    setToday(t)
+    setPaymentsError(null)
+    return linkRes.data // the freshly read links (callers must not rely on state, which updates later)
+  }
 
   const load = async () => {
     if (!user) return
@@ -43,16 +85,39 @@ export default function Debts() {
       return
     }
     setDebts(res.data || [])
+    await loadPayments()
     setLoading(false)
   }
 
+  // Reload only when the signed-in USER changes. Supabase hands out a new `user` object whenever the browser tab regains
+  // focus or the session refreshes; depending on the object itself would reload the page and close an open Payments or
+  // picker dialog, losing the selection.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [user])
+  useEffect(() => { load() }, [user?.id])
 
   const activeCount = debts.filter((d) => d.status === 'active').length
   const atLimit = activeCount >= ACTIVE_DEBT_LIMIT
   const limitMessage = `You can have ${ACTIVE_DEBT_LIMIT} active debts at once. Close one to add another.`
   const visible = debts.filter((d) => d.status === activeTab)
+
+  const paymentsReady = links !== null && !paymentsError
+  const rowsByDebt = useMemo(() => {
+    const map = new Map()
+    if (!paymentsReady) return map
+    for (const d of debts) map.set(d.id, annotateLinks({ debt: d, links: links.filter((l) => l.debt_id === d.id), txById, accountNames, today }))
+    return map
+  }, [debts, links, txById, accountNames, today, paymentsReady])
+  const infoByDebt = useMemo(() => {
+    const map = new Map()
+    for (const d of debts) {
+      const rows = rowsByDebt.get(d.id)
+      if (!rows) continue
+      map.set(d.id, { linkedCount: rows.length, figures: computeDebtFigures(d, rows, today), quiet: quietMonths(d, rows, today) })
+    }
+    return map
+  }, [debts, rowsByDebt, today])
+  const anyLinks = paymentsReady && links.length > 0
+  const paymentsDebt = paymentsDebtId ? debts.find((d) => d.id === paymentsDebtId) || null : null
 
   const createDebt = async (values) => {
     if (atLimit) return limitMessage
@@ -92,6 +157,94 @@ export default function Debts() {
     await load()
   }
 
+  // The picker: the newest unlinked expenses in the window (strictly after the as-of date, through today).
+  const readCandidates = async (debt, linkList = links) => {
+    const t = todayISO()
+    const linkedIds = new Set((linkList || []).map((l) => l.transaction_id))
+    const res = await collectUnlinked({
+      debt, today: t, linkedIds,
+      readPage: (from, to) =>
+        supabase.from('transactions').select('id, type, amount, transaction_date, description, account_id, category_id').eq('user_id', user.id).eq('type', 'expense')
+          .gt('transaction_date', String(debt.as_of_date).slice(0, 10)).lte('transaction_date', t)
+          .order('transaction_date', { ascending: false }).order('id', { ascending: false }).range(from, to),
+    })
+    if (res.error) return { error: res.error }
+    return { candidates: res.rows, more: res.more }
+  }
+
+  const openLinker = async (debt) => {
+    if (writing.current) return
+    writing.current = true
+    setActionError(null)
+    try {
+      const cand = await readCandidates(debt)
+      const catRes = await readAllPages((from, to) => supabase.from('categories').select('id, name').order('id', { ascending: true }).range(from, to))
+      if (cand.error || catRes.error) { setActionError("Couldn't load your expenses. Please try again."); return }
+      setLinkData({ debtId: debt.id, candidates: cand.candidates, more: cand.more, categoryNames: new Map(catRes.data.map((c) => [c.id, c.name])) })
+    } finally {
+      writing.current = false
+    }
+  }
+
+  // Insert ONLY links (user_id, debt_id, transaction_id). No transaction, account or goal is written. One statement for
+  // all the chosen payments: they are all linked or none is. Resolves to an error sentence, or null when saved.
+  const linkPayments = async (debt, transactionIds) => {
+    if (writing.current) return null
+    if (debt.status === 'closed') return 'This debt is closed. Reopen it to link payments.'
+    writing.current = true
+    try {
+      const { error: insertErr } = await supabase.from('debt_payments').insert(transactionIds.map((id) => ({ user_id: user.id, debt_id: debt.id, transaction_id: id })))
+      if (insertErr) {
+        // eslint-disable-next-line no-console
+        console.error(insertErr)
+        const message = paymentErrorMessage(insertErr, "Couldn't link these payments. Please try again.")
+        if (message === DUPLICATE_LINK_MESSAGE || message === MISSING_MESSAGE || message === NOT_EXPENSE_MESSAGE) {
+          // The list the user picked from is out of date: read it again, and keep their selection where it still applies.
+          const fresh = await loadPayments()
+          const cand = fresh ? await readCandidates(debt, fresh) : { error: true }
+          if (!cand.error) setLinkData((prev) => (prev ? { ...prev, candidates: cand.candidates, more: cand.more } : prev))
+        }
+        return message
+      }
+      await loadPayments()
+      setLinkData(null)
+      return null
+    } finally {
+      writing.current = false
+    }
+  }
+
+  // Delete ONLY the link row. The transaction is not touched.
+  const unlinkPayment = async (debt, row) => {
+    if (writing.current) return null
+    if (debt.status === 'closed') return 'This debt is closed. Reopen it to unlink payments.'
+    writing.current = true
+    try {
+      const { error: deleteErr } = await supabase.from('debt_payments').delete().eq('id', row.linkId).eq('user_id', user.id)
+      if (deleteErr) {
+        // eslint-disable-next-line no-console
+        console.error(deleteErr)
+        return "Couldn't unlink this payment. Please try again."
+      }
+      await loadPayments()
+      return null
+    } finally {
+      writing.current = false
+    }
+  }
+
+  const exportPaymentsCsv = () => {
+    const blob = new Blob([buildDebtPaymentsCsv(paymentsExportRows(debts, rowsByDebt))], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `countwise-debt-payments-${todayISO()}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
   const exportCsv = () => {
     const blob = new Blob([buildDebtsCsv(debts)], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -117,6 +270,12 @@ export default function Debts() {
       <PageHeader name={profile?.username} />
 
       {error && <ErrorState message={error} onRetry={load} />}
+      {!error && paymentsError && (
+        <div className="py-3" data-testid="payments-error">
+          <p className="text-sm text-badText">{paymentsError}</p>
+          <Button variant="text" onClick={loadPayments} className="mt-1.5 text-sm">Retry payments</Button>
+        </div>
+      )}
 
       {actionError && (
         <div className="flex items-center justify-between gap-3 text-sm text-badText">
@@ -146,6 +305,10 @@ export default function Debts() {
             <Download size={16} />
             Export CSV
           </Button>
+          <Button variant="secondary" onClick={exportPaymentsCsv} disabled={!anyLinks} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
+            <Download size={16} />
+            Export payments
+          </Button>
           <Button onClick={() => { setActionError(null); if (atLimit) setActionError(limitMessage); else setCreating(true) }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
             <Plus size={16} />
             Add debt
@@ -164,12 +327,38 @@ export default function Debts() {
             <DebtCard
               key={debt.id}
               debt={debt}
+              today={today}
+              payments={paymentsReady ? infoByDebt.get(debt.id) || null : null}
+              onPayments={() => { setActionError(null); setPaymentsDebtId(debt.id) }}
               onEdit={() => { setActionError(null); setEditing(debt) }}
               onClose={() => setStatus(debt, 'closed')}
               onReopen={() => setStatus(debt, 'active')}
             />
           ))}
         </div>
+      )}
+
+      {paymentsDebt && !linkData && (
+        <PaymentsModal
+          debt={paymentsDebt}
+          rows={rowsByDebt.get(paymentsDebt.id) || []}
+          readOnly={paymentsDebt.status === 'closed'}
+          onUnlink={(row) => unlinkPayment(paymentsDebt, row)}
+          onLinkMore={() => openLinker(paymentsDebt)}
+          onClose={() => setPaymentsDebtId(null)}
+        />
+      )}
+
+      {paymentsDebt && linkData && linkData.debtId === paymentsDebt.id && (
+        <LinkPaymentsModal
+          debt={paymentsDebt}
+          candidates={linkData.candidates}
+          more={linkData.more}
+          categoryNames={linkData.categoryNames}
+          accountNames={accountNames}
+          onLink={(ids) => linkPayments(paymentsDebt, ids)}
+          onClose={() => setLinkData(null)}
+        />
       )}
 
       {creating && <DebtFormModal title="Add debt" submitLabel="Save debt" onClose={() => setCreating(false)} onSubmit={createDebt} />}

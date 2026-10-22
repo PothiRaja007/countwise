@@ -20,3 +20,16 @@ export function buildDebtsCsv(rows) {
   for (const r of rows || []) lines.push(DEBT_CSV_COLUMNS.map((c) => cell(r[c], TEXT_COLUMNS.has(c))).join(','))
   return lines.join('\r\n') + '\r\n'
 }
+
+// D4b - CSV of the payments linked to debts: one row per link, with the stored transaction details and whether the
+// figures count it. No ids and no user ids. Text cells get the same formula guard as above. Pure.
+export const DEBT_PAYMENT_CSV_COLUMNS = [
+  'debt_name', 'debt_status', 'transaction_date', 'amount', 'description', 'account', 'transaction_type', 'counted', 'not_counted_reason', 'linked_on',
+]
+const PAYMENT_TEXT_COLUMNS = new Set(['debt_name', 'debt_status', 'description', 'account', 'transaction_type', 'counted', 'not_counted_reason'])
+
+export function buildDebtPaymentsCsv(rows) {
+  const lines = [DEBT_PAYMENT_CSV_COLUMNS.join(',')]
+  for (const r of rows || []) lines.push(DEBT_PAYMENT_CSV_COLUMNS.map((c) => cell(r[c], PAYMENT_TEXT_COLUMNS.has(c))).join(','))
+  return lines.join('\r\n') + '\r\n'
+}

@@ -1,4 +1,4 @@
-import { Pencil, Archive, RotateCcw } from 'lucide-react'
+import { Pencil, Archive, RotateCcw, ReceiptText } from 'lucide-react'
 import { formatCurrency } from '../../lib/format.js'
 import { dateFromISO } from '../../lib/isoDate.js'
 import { debtView, kindLabel, dueDayText } from '../../lib/debtForm.js'
@@ -6,16 +6,24 @@ import { debtView, kindLabel, dueDayText } from '../../lib/debtForm.js'
 function fmtDate(iso) {
   return dateFromISO(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+function fmtCount(n, noun) { return `${n} ${noun}${n === 1 ? '' : 's'}` }
 function monthsText(n) {
   if (n >= 12 && n % 12 === 0) return `${n} months (${n / 12} ${n === 12 ? 'year' : 'years'})`
   return `${n} ${n === 1 ? 'month' : 'months'}`
 }
 
-// One debt. Every calculated figure is next to the date it is calculated from. Nothing here is a current balance.
-export default function DebtCard({ debt, onEdit, onClose, onReopen }) {
+// One debt. Every calculated figure is next to the date it is calculated from. Nothing here is a lender statement.
+// `payments` (D4b) is null while the linked payments are not available (loading failed); otherwise
+// { count, linkedCount, figures, quiet } from lib/debtPayments.js. With no counted payment the card shows exactly
+// what D3 showed: the opening figures, never an invented balance.
+export default function DebtCard({ debt, payments = null, today, onEdit, onClose, onReopen, onPayments }) {
   const view = debtView(debt)
   const asOf = fmtDate(debt.as_of_date)
   const closed = debt.status === 'closed'
+  const figures = payments && payments.figures && payments.figures.kind === 'figures' ? payments.figures : null
+  const failed = payments && payments.figures && payments.figures.kind === 'failed'
+  const cleared = view.state === 'cleared' || (figures && figures.cleared)
+  const linkedCount = payments ? payments.linkedCount : 0
 
   return (
     <div className="py-4" data-testid="debt-card">
@@ -24,8 +32,8 @@ export default function DebtCard({ debt, onEdit, onClose, onReopen }) {
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-display text-base font-semibold tracking-tight text-ink dark:text-offwhite truncate">{debt.name}</h3>
             <span className="text-xs font-medium text-muted dark:text-mutedDark">{kindLabel(debt.kind)}</span>
-            {view.state === 'cleared' && <span className="text-xs font-medium text-goodText">Cleared</span>}
-            {view.state === 'estimate' && <span className="text-xs font-medium text-muted dark:text-mutedDark">Estimate</span>}
+            {cleared && <span className="text-xs font-medium text-goodText">Cleared</span>}
+            {view.state === 'estimate' && !cleared && <span className="text-xs font-medium text-muted dark:text-mutedDark">Estimate</span>}
             {closed && <span className="text-xs font-medium text-muted dark:text-mutedDark">Closed</span>}
           </div>
           {debt.lender && <div className="text-xs text-muted dark:text-mutedDark mt-0.5">{debt.lender}</div>}
@@ -46,13 +54,78 @@ export default function DebtCard({ debt, onEdit, onClose, onReopen }) {
             {debt.due_day != null && <div>Due on {dueDayText(debt.due_day)}</div>}
           </div>
 
-          {view.state === 'estimate' && (
+          {figures && (
+            <div className="mt-2" data-testid="debt-figures">
+              <div className="text-sm text-ink dark:text-offwhite">
+                {figures.estimate ? 'Owed today (estimate)' : 'Owed today (calculated)'}: <span className="font-mono font-semibold">{formatCurrency(figures.owedToday)}</span>
+              </div>
+              <div className="text-xs text-muted dark:text-mutedDark mt-1 space-y-0.5">
+                <div>Principal outstanding: <span className="font-mono">{formatCurrency(figures.principal)}</span></div>
+                <div>Unpaid interest: <span className="font-mono">{formatCurrency(figures.interest)}</span></div>
+                <div>Principal repaid: <span className="font-mono">{formatCurrency(figures.principalRepaid)}</span></div>
+                <div>Interest paid: <span className="font-mono">{formatCurrency(figures.interestPaid)}</span></div>
+                {figures.overpaid > 0 && <div>Overpaid: <span className="font-mono">{formatCurrency(figures.overpaid)}</span> more than was owed</div>}
+              </div>
+              <p className="text-xs text-muted dark:text-mutedDark mt-1">
+                From your figures on {asOf} and {fmtCount(figures.paymentsUsed, 'linked payment')}, as of {fmtDate(today)}. Not a lender statement.
+              </p>
+              {figures.estimate && (
+                <p className="text-xs text-muted dark:text-mutedDark mt-1">
+                  Estimate: a credit card changes with every statement, and new spending on the card is not included.
+                </p>
+              )}
+            </div>
+          )}
+
+          {failed && (
+            <p className="text-xs text-muted dark:text-mutedDark mt-2" data-testid="debt-figures-failed">
+              Couldn't calculate today's figures from the linked payments. The opening figures above are unchanged.
+            </p>
+          )}
+
+          {!figures && view.state === 'estimate' && (
             <p className="text-xs text-muted dark:text-mutedDark mt-2">
               Estimate: a credit card changes with every statement, so these are the figures you entered for {asOf}, not a current balance.
             </p>
           )}
 
-          {view.state === 'projection' && (view.emi != null || view.schedule) && (
+          {payments && payments.figures && payments.figures.kind === 'same-month' && !cleared && (
+            <p className="text-xs text-muted dark:text-mutedDark mt-2" data-testid="debt-same-month">
+              {fmtCount(payments.figures.paymentsWaiting, 'linked payment')} will be applied from {payments.figures.from}. Figures are calculated month by month, and today is still in the month of your figures.
+            </p>
+          )}
+
+          {payments && payments.figures && payments.figures.kind !== 'same-month' && !figures && !failed && !cleared && !closed && (
+            <p className="text-xs text-muted dark:text-mutedDark mt-2" data-testid="debt-no-payments">
+              {linkedCount === 0
+                ? 'No payments linked yet. Link your payments to see what you owe today.'
+                : 'None of the linked payments is counted yet. Open Payments to see why.'}
+            </p>
+          )}
+
+          {payments && payments.quiet != null && !cleared && !closed && (
+            <p className="text-xs text-muted dark:text-mutedDark mt-1" data-testid="debt-quiet">No payment linked in {payments.quiet} months</p>
+          )}
+
+          {figures && figures.schedule && (
+            <div className="text-xs text-muted dark:text-mutedDark mt-2 space-y-0.5" data-testid="debt-projection">
+              {figures.schedule.paysOff && (
+                <div>
+                  At <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span> a month the principal outstanding today is paid off in {monthsText(figures.schedule.months)}, with about{' '}
+                  <span className="font-mono">{formatCurrency(figures.schedule.totalInterest)}</span> interest.
+                </div>
+              )}
+              {!figures.schedule.paysOff && figures.schedule.reason === 'payment-not-above-interest' && (
+                <div>This monthly payment does not cover a month of interest, so the principal would not go down.</div>
+              )}
+              {!figures.schedule.paysOff && figures.schedule.reason === 'exceeds-max-months' && (
+                <div>At this monthly payment the principal would take more than 50 years to clear.</div>
+              )}
+              <div>Calculated from the principal outstanding today. Unpaid interest is not included.</div>
+            </div>
+          )}
+
+          {!figures && view.state === 'projection' && (view.emi != null || view.schedule) && (
             <div className="text-xs text-muted dark:text-mutedDark mt-2 space-y-0.5" data-testid="debt-projection">
               {view.emi != null && (
                 <div>A payment of <span className="font-mono">{formatCurrency(view.emi)}</span> a month would clear the principal in {monthsText(debt.remaining_months)}.</div>
@@ -72,6 +145,19 @@ export default function DebtCard({ debt, onEdit, onClose, onReopen }) {
               <div>Calculated from the principal on {asOf}. Unpaid interest is not included.</div>
             </div>
           )}
+
+          <div className="mt-3">
+            <button
+              onClick={onPayments}
+              disabled={!payments}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line dark:border-lineDark text-xs font-medium text-ink dark:text-offwhite hover:text-goldText disabled:opacity-40"
+              aria-label={`Payments for ${debt.name}`}
+              title="Linked payments"
+            >
+              <ReceiptText size={14} />
+              Payments{payments ? ` (${linkedCount})` : ''}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">

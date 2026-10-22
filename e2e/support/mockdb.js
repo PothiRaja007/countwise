@@ -21,7 +21,7 @@ function seed(kindList) {
       { id: 'r4', keyword: 'food', category_id: 'c1', priority: 1 }, { id: 'r5', keyword: 'dinner', category_id: 'c1', priority: 1 }, { id: 'r6', keyword: 'course', category_id: 'c6', priority: 1 }, { id: 'r7', keyword: 'salary', category_id: 'c4', priority: 1 },
     ],
     budgets: [bud('b1', 'c3', 4500, '2026-10', '31'), bud('b2', 'c5', 1000, '2026-10', '31'), bud('b4', 'c2', 800, '2026-10', '31')],
-    learning_items: [], goals: [], goal_contributions: [], debts: [],
+    learning_items: [], goals: [], goal_contributions: [], debts: [], debt_payments: [],
     transactions: [
       row({ id: 't1', type: 'income', amount: 100000, account_id: 'a1', to_account_id: null, category_id: 'c4', transaction_date: '2026-09-01', description: 't1', original_input: 't1' }),
       row({ id: 't2', type: 'expense', amount: 5000, account_id: 'a1', to_account_id: null, category_id: 'c1', transaction_date: '2026-10-01', description: 't2', original_input: 't2' }),
@@ -50,12 +50,41 @@ function seed(kindList) {
   }
   // D3: the debts table. 'debt' = one active loan and one closed debt; 'debt20' = twenty active debts (the UI limit).
   const debt = (o) => row({ kind: 'term_loan', lender: null, as_of_date: '2026-10-01', as_of_outstanding: 100000, as_of_accrued_interest: 0, annual_rate_pct: 10, monthly_payment: null, remaining_months: null, due_day: null, status: 'active', ...o })
-  if (has('debt')) {
+  if (has('debt') || has('debtpay') || has('debtlinked') || has('debtmany') || has('debtbig')) {
     db.debts.push(
       debt({ id: 'd1', name: 'Education loan', lender: 'SBI', as_of_outstanding: 250000, annual_rate_pct: 9.5, monthly_payment: 5000, remaining_months: 60, due_day: 5 }),
       debt({ id: 'd2', name: 'Old phone EMI', kind: 'interest_free', as_of_outstanding: 0, annual_rate_pct: 0, status: 'closed' }),
     )
   }
+  // D4b: payments. 'debtpay' = the 'debt' seed + a second loan (Bike loan, figures from 1 Aug 2026) + a spread of
+  // transactions to pick from; 'debtlinked' = 'debtpay' with two EMI expenses already linked to the Bike loan;
+  // 'debtmany' = 'debtpay' + 230 more expenses (the picker shows the 200 newest). The fixed "today" is 15 Oct 2026.
+  if (has('debtpay') || has('debtlinked') || has('debtmany') || has('debtbig')) {
+    db.accounts.push(row({ id: 'a2', name: 'HDFC', type: 'bank', is_active: true }))
+    db.categories.push(cat('c7', 'EMI/Loan', 'expense'))
+    db.debts.push(debt({ id: 'd3', name: 'Bike loan', lender: 'HDFC', as_of_date: '2026-08-01', as_of_outstanding: 60000, annual_rate_pct: 12, monthly_payment: 3000, remaining_months: 24, due_day: 10 }))
+    const tx = (id, type, amount, date, description, category_id, to_account_id = null) => row({ id, type, amount, account_id: 'a1', to_account_id, category_id, transaction_date: date, description, original_input: description })
+    db.transactions.push(
+      tx('p1', 'expense', 5000, '2026-09-05', 'Bike loan EMI Sep', 'c7'),
+      tx('p2', 'expense', 5000, '2026-10-05', 'Bike loan EMI Oct', 'c7'),
+      tx('p3', 'expense', 1200, '2026-10-08', 'Groceries', 'c1'),
+      tx('p4', 'expense', 700, '2026-10-12', 'Taxi', 'c5'),
+      tx('p5', 'income', 3000, '2026-10-09', 'Refund', 'c4'),
+      tx('p6', 'transfer', 2000, '2026-10-11', 'Move to HDFC', null, 'a2'),
+      tx('p7', 'expense', 800, '2026-08-01', 'Same day as the figures', 'c1'),
+      tx('p8', 'expense', 900, '2026-10-20', 'Future dated', 'c1'),
+      tx('p9', 'expense', 600, '2026-07-20', 'Before the figures', 'c1'),
+      tx('p10', 'expense', 70000, '2026-10-14', 'Lump sum', 'c1'),
+    )
+  }
+  if (has('debtlinked')) {
+    db.debt_payments.push(row({ id: 'lk1', debt_id: 'd3', transaction_id: 'p1' }), row({ id: 'lk2', debt_id: 'd3', transaction_id: 'p2' }))
+  }
+  if (has('debtmany') || has('debtbig')) {
+    for (let i = 1; i <= 230; i++) db.transactions.push(row({ id: `bm${String(i).padStart(3, '0')}`, type: 'expense', amount: 100 + i, account_id: 'a1', to_account_id: null, category_id: 'c1', transaction_date: `2026-09-${String(1 + (i % 28)).padStart(2, '0')}`, description: `Bulk ${i}`, original_input: `Bulk ${i}` }))
+  }
+  // 'debtbig' = 'debtmany' with 130 of the bulk expenses already linked to the Bike loan (reads must be paged in 100s).
+  if (has('debtbig')) for (let i = 1; i <= 130; i++) db.debt_payments.push(row({ id: `bl${i}`, debt_id: 'd3', transaction_id: `bm${String(i).padStart(3, '0')}` }))
   if (has('debt20')) for (let i = 1; i <= 20; i++) db.debts.push(debt({ id: `m${i}`, name: `Debt ${i}`, as_of_outstanding: 1000 * i }))
   return db
 }
@@ -68,6 +97,15 @@ globalThis.__e2e = {
   counts: () => Object.fromEntries(Object.entries(DB).map(([k, v]) => [k, v.length])),
   rows: (t) => JSON.parse(JSON.stringify(DB[t] || [])),
   reset: (kind) => { DB = seed(kind); state.writes.length = 0; state.reads.length = 0 },
+  // Test-only: what the user does on the Transactions page (edit / delete a transaction), and the database's cascade.
+  // These are not app writes, so they are not recorded in __mock.writes.
+  add: (table, r) => { (DB[table] = DB[table] || []).push(row(r)) },
+  mutate: (table, id, patch) => { const r = (DB[table] || []).find((x) => x.id === id); if (r) Object.assign(r, patch) },
+  remove: (table, id) => {
+    DB[table] = (DB[table] || []).filter((x) => x.id !== id)
+    if (table === 'transactions') DB.debt_payments = DB.debt_payments.filter((l) => l.transaction_id !== id)
+    if (table === 'debts') DB.debt_payments = DB.debt_payments.filter((l) => l.debt_id !== id)
+  },
 }
 
 const cmp = {
@@ -76,7 +114,9 @@ const cmp = {
 
 function builder(table) {
   const filters = []
-  let order = null, lim = null
+  const orders = []
+  let lim = null, rng = null
+  const inSizes = []
   let cols = '*', mode = 'select', payload = null, single = false, wantRows = false
   const api = {
     select(c) { if (mode === 'select') cols = c || '*'; else wantRows = true; return api },
@@ -86,21 +126,22 @@ function builder(table) {
     delete() { mode = 'delete'; return api },
     maybeSingle() { single = true; return api },
     single() { single = true; return api },
-    in(c, vs) { filters.push((r) => vs.includes(r[c])); return api },
+    in(c, vs) { inSizes.push(vs.length); filters.push((r) => vs.includes(r[c])); return api },
     is(c, v) { filters.push((r) => (v === null ? r[c] == null : r[c] === v)); return api },
     like() { return api }, ilike() { return api }, or() { return api }, not() { return api }, match() { return api }, contains() { return api },
-    order(c, o) { order = { c, asc: !(o && o.ascending === false) }; return api },
-    limit(n) { lim = n; return api }, range() { return api },
+    order(c, o) { orders.push({ c, asc: !(o && o.ascending === false) }); return api },
+    limit(n) { lim = n; return api }, range(a, b) { rng = [a, b]; return api },
     then(resolve, reject) { exec().then(resolve, reject) },
   }
   for (const [name, fn] of Object.entries(cmp)) api[name] = (c, v) => { filters.push((r) => fn(r[c], v)); return api }
   async function exec() {
     DB[table] = DB[table] || []
     if (mode === 'select') {
-      state.reads.push({ table, cols })
+      state.reads.push({ table, cols, range: rng, inSizes: inSizes.slice() })
       if (state.failRead === table) return { data: null, error: { message: 'stand-in read failure', code: 'X' } }
       let rows = DB[table].filter((r) => filters.every((f) => f(r)))
-      if (order) rows = [...rows].sort((a, b) => (a[order.c] > b[order.c] ? 1 : a[order.c] < b[order.c] ? -1 : 0) * (order.asc ? 1 : -1))
+      if (orders.length) rows = [...rows].sort((a, b) => { for (const o of orders) { const d = (a[o.c] > b[o.c] ? 1 : a[o.c] < b[o.c] ? -1 : 0) * (o.asc ? 1 : -1); if (d) return d } return 0 })
+      if (rng) rows = rows.slice(rng[0], rng[1] + 1)
       if (lim != null) rows = rows.slice(0, lim)
       if (cols !== '*') { const names = cols.split(',').map((s) => s.trim().split(/[\s(]/)[0]); rows = rows.map((r) => Object.fromEntries(names.map((n) => [n, r[n]]))) }
       return { data: single ? (rows[0] || null) : rows, error: null }
@@ -124,6 +165,21 @@ function builder(table) {
       // D3: the same refusal for a second ACTIVE debt with the same name (debts_active_name_per_user, supabase/p16_debts.sql).
       if ((Array.isArray(payload) ? payload : [payload]).some((c) => table === 'debts' && c.status === 'active' && DB.debts.some((r) => r.status === 'active' && String(r.name).toLowerCase() === String(c.name).toLowerCase()))) {
         return { data: null, error: { message: 'duplicate key value violates unique constraint "debts_active_name_per_user"', code: '23505' } }
+      }
+      // D4b: the rules of debt_payments (supabase/p17_debt_payments.sql). The whole statement saves, or none of it.
+      if (table === 'debt_payments') {
+        const batch = Array.isArray(payload) ? payload : [payload]
+        const seen = new Set()
+        for (const c of batch) {
+          const tx = DB.transactions.find((r) => r.id === c.transaction_id && r.user_id === c.user_id)
+          const debt = DB.debts.find((r) => r.id === c.debt_id && r.user_id === c.user_id)
+          if (!tx || !debt) return { data: null, error: { message: 'insert or update on table "debt_payments" violates foreign key constraint', code: '23503' } }
+          if (tx.type !== 'expense') return { data: null, error: { message: 'a debt payment must be an expense transaction', code: '23514' } }
+          if (seen.has(c.transaction_id) || DB.debt_payments.some((r) => r.transaction_id === c.transaction_id)) {
+            return { data: null, error: { message: 'duplicate key value violates unique constraint "debt_payments_transaction_id_key"', code: '23505' } }
+          }
+          seen.add(c.transaction_id)
+        }
       }
       out = (Array.isArray(payload) ? payload : [payload]).map((p) => ({ id: `n${++seq}`, created_at: '2026-10-15T00:00:00Z', updated_at: '2026-10-15T00:00:00Z', ...p }))
       DB[table].push(...out)

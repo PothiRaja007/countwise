@@ -172,4 +172,11 @@ Added after the `debts` table (see above). A row says "this expense transaction 
 - **Existing table touched:** `transactions` gains one constraint, `transactions_id_user_key unique (id, user_id)`. The id is already the primary key, so it can never fail on existing data. It exists only so the composite foreign key above works (same pattern as `accounts_id_user_key` and `goals_id_user_key`). No column, policy or trigger of `transactions` changes.
 - RLS: one policy, `own debt payments`, for all commands, to signed-in users only (`auth.uid() = user_id` for both reading and writing).
 - Index on `debt_id` for the per-debt list.
-- Applied by `supabase/p17_debt_payments.sql` (standalone, with pre-flight checks, post-checks and a rollback). The screen that uses the table is a later stage (D4b).
+- Applied by `supabase/p17_debt_payments.sql` (standalone, with pre-flight checks, post-checks and a rollback).
+
+Used by the Debts screen (D4b, `/debts`). The page reads the links (in pages of 100) and the linked transactions' amount, date, description, type and account, and it writes only this table: one insert of `(user_id, debt_id, transaction_id)` rows to link, one delete of a single link to unlink. It never creates, edits or deletes a transaction, an account or a goal contribution, and linking or unlinking moves no balance.
+- **Live amounts:** the debt's figures are recalculated with `replayDebt` from the opening figures on `as_of_date` plus the linked expenses dated strictly after that date, through today. Editing a linked transaction's amount or date, or deleting it, changes the debt on the next load. A linked transaction later edited into income or a transfer is shown as "Not counted: this is no longer an expense" with an Unlink action; one dated on or before `as_of_date`, or after today, is shown as not counted too.
+- **Month by month:** the engine closes whole calendar months. While today is still in the month of `as_of_date`, linked payments are shown as waiting and applied from the next month.
+- **Picker:** unlinked expenses dated after `as_of_date` through today, newest first, EMI / Loan categories suggested first, at most 200 listed with a notice when more exist.
+- **Closed debts** keep their links and show them read-only until the debt is reopened.
+- **Export:** a separate payments CSV (one row per link, no ids) from the Debts page.
