@@ -8,6 +8,7 @@ import DebtCard from '../components/debts/DebtCard.jsx'
 import DebtFormModal from '../components/debts/DebtFormModal.jsx'
 import PaymentsModal from '../components/debts/PaymentsModal.jsx'
 import LinkPaymentsModal from '../components/debts/LinkPaymentsModal.jsx'
+import PlannerPanel from '../components/debts/PlannerPanel.jsx'
 import Button from '../components/ui/Button.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
@@ -22,6 +23,7 @@ import {
 const TABS = [
   { key: 'active', label: 'Active' },
   { key: 'closed', label: 'Closed' },
+  { key: 'planner', label: 'Planner' }, // D5: the repayment planner (reads what is already loaded; writes nothing)
 ]
 
 const COLUMNS = 'id, name, kind, lender, as_of_date, as_of_outstanding, as_of_accrued_interest, annual_rate_pct, monthly_payment, remaining_months, due_day, status, created_at, updated_at'
@@ -98,7 +100,8 @@ export default function Debts() {
   const activeCount = debts.filter((d) => d.status === 'active').length
   const atLimit = activeCount >= ACTIVE_DEBT_LIMIT
   const limitMessage = `You can have ${ACTIVE_DEBT_LIMIT} active debts at once. Close one to add another.`
-  const visible = debts.filter((d) => d.status === activeTab)
+  const onPlanner = activeTab === 'planner'
+  const visible = onPlanner ? [] : debts.filter((d) => d.status === activeTab)
 
   const paymentsReady = links !== null && !paymentsError
   const rowsByDebt = useMemo(() => {
@@ -300,7 +303,7 @@ export default function Debts() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        {!onPlanner && <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={exportCsv} disabled={debts.length === 0} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
             <Download size={16} />
             Export CSV
@@ -313,13 +316,15 @@ export default function Debts() {
             <Plus size={16} />
             Add debt
           </Button>
-        </div>
+        </div>}
       </div>
+
+      {onPlanner && <PlannerPanel debts={debts} infoByDebt={infoByDebt} today={today} paymentsReady={paymentsReady} />}
 
       {atLimit && activeTab === 'active' && <p className="text-xs text-muted dark:text-mutedDark">{limitMessage}</p>}
 
-      {debts.length === 0 && !error && <EmptyState message="No debts added yet." className="py-8" />}
-      {debts.length > 0 && visible.length === 0 && <EmptyState message={`No ${activeTab} debts.`} className="py-8" />}
+      {!onPlanner && debts.length === 0 && !error && <EmptyState message="No debts added yet." className="py-8" />}
+      {!onPlanner && debts.length > 0 && visible.length === 0 && <EmptyState message={`No ${activeTab} debts.`} className="py-8" />}
 
       {visible.length > 0 && (
         <div className="divide-y divide-line dark:divide-lineDark border-t border-b border-line dark:border-lineDark">

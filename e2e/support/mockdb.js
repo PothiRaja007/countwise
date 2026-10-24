@@ -80,6 +80,15 @@ function seed(kindList) {
   if (has('debtlinked')) {
     db.debt_payments.push(row({ id: 'lk1', debt_id: 'd3', transaction_id: 'p1' }), row({ id: 'lk2', debt_id: 'd3', transaction_id: 'p2' }))
   }
+  // D5: the planner. 'debtplan' (used together with 'debtlinked') adds a credit card with a big balance and a debt with no
+  // monthly payment, so the planner has a mix: Education loan, Bike loan (figures from its two linked payments), Card
+  // (estimate), and two debts left out (Old phone EMI is closed, Friend loan has no payment figure).
+  if (has('debtplan')) {
+    db.debts.push(
+      debt({ id: 'd4', name: 'Card', kind: 'credit_card', as_of_outstanding: 80000, annual_rate_pct: 36, monthly_payment: 3000 }),
+      debt({ id: 'd5', name: 'Friend loan', kind: 'interest_free', as_of_outstanding: 10000, annual_rate_pct: 0, monthly_payment: null }),
+    )
+  }
   if (has('debtmany') || has('debtbig')) {
     for (let i = 1; i <= 230; i++) db.transactions.push(row({ id: `bm${String(i).padStart(3, '0')}`, type: 'expense', amount: 100 + i, account_id: 'a1', to_account_id: null, category_id: 'c1', transaction_date: `2026-09-${String(1 + (i % 28)).padStart(2, '0')}`, description: `Bulk ${i}`, original_input: `Bulk ${i}` }))
   }
