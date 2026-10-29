@@ -89,6 +89,12 @@ function seed(kindList) {
       debt({ id: 'd5', name: 'Friend loan', kind: 'interest_free', as_of_outstanding: 10000, annual_rate_pct: 0, monthly_payment: null }),
     )
   }
+  // D6: 'debtind' adds income in Jul and Aug 2026 (the base seed already has 1,00,000 on 1 Sep), so the last 3 complete
+  // months before the fixed "today" (15 Oct 2026) all have income: 60,000 + 60,000 + 1,00,000 = 2,20,000. Without it only Sep has income.
+  if (has('debtind')) {
+    const inc = (id, date, amount) => row({ id, type: 'income', amount, account_id: 'a1', to_account_id: null, category_id: 'c4', transaction_date: date, description: id, original_input: id })
+    db.transactions.push(inc('in-jul', '2026-07-01', 60000), inc('in-aug', '2026-08-01', 60000))
+  }
   if (has('debtmany') || has('debtbig')) {
     for (let i = 1; i <= 230; i++) db.transactions.push(row({ id: `bm${String(i).padStart(3, '0')}`, type: 'expense', amount: 100 + i, account_id: 'a1', to_account_id: null, category_id: 'c1', transaction_date: `2026-09-${String(1 + (i % 28)).padStart(2, '0')}`, description: `Bulk ${i}`, original_input: `Bulk ${i}` }))
   }

@@ -62,9 +62,9 @@ test('G2: the planner library imports only the engine and the money limit; the p
   assert.deepStrictEqual(panel.slice().sort(), ['../../lib/debtPlanner.js', '../../lib/format.js', '../../lib/isoDate.js', '../ui/Input.jsx', 'react'])
 })
 
-test('G3: Debts.jsx gained no database call in D5 (11 .from() calls, as at the end of D4b); the planner tab renders the panel', () => {
+test('G3: Debts.jsx has 12 .from() calls: the 11 of D4b plus ONE read-only income query added in D6 (see debtIndicatorsWriteGuard.test.js); the planner tab renders the panel', () => {
   const page = stripComments(read('pages/Debts.jsx'))
-  assert.strictEqual((page.match(/\.from\s*\(/g) || []).length, 11)
+  assert.strictEqual((page.match(/\.from\s*\(/g) || []).length, 12)
   assert.ok(/<PlannerPanel\b/.test(page))
   assert.ok(/key: 'planner'/.test(page))
 })

@@ -11,6 +11,7 @@ import PageHeader from '../components/layout/PageHeader.jsx'
 import ErrorState from '../components/layout/ErrorState.jsx'
 import MoneyInboxInput from '../components/money-inbox/MoneyInboxInput.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
+import OverviewDebtCard from '../components/debts/OverviewDebtCard.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
 import { dateFromISO } from '../lib/isoDate.js'
 
@@ -76,6 +77,7 @@ export default function Overview() {
   const [goalContributions, setGoalContributions] = useState([])
   const [rhythmPeriod, setRhythmPeriod] = useState('30D')
   const [refreshTick, setRefreshTick] = useState(0)
+  const [debtRows, setDebtRows] = useState(null) // D6: active debts for the small Debts card; null = not read or failed (the card is then simply absent)
 
   useEffect(() => {
     if (!user) return
@@ -130,6 +132,24 @@ export default function Overview() {
       cancelled = true
     }
   }, [user, refreshTick])
+
+  // D6: a SEPARATE, read-only read of the active debts. It cannot delay, fail or change anything else on this page: if it
+  // fails, the Debts card is just not shown.
+  useEffect(() => {
+    if (!user) return undefined
+    let cancelled = false
+    ;(async () => {
+      const res = await supabase
+        .from('debts')
+        .select('id, name, kind, status, as_of_date, as_of_outstanding, as_of_accrued_interest, monthly_payment')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+      if (cancelled) return
+      setDebtRows(res.error ? null : res.data || [])
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, refreshTick])
 
   const categoryNameById = useMemo(() => {
     const map = new Map()
@@ -344,6 +364,9 @@ export default function Overview() {
               )}
             </div>
           </div>
+
+          {/* 6. Debts (D6): a small summary of payments only; no debt balance is shown or calculated here */}
+          {debtRows && <OverviewDebtCard debts={debtRows} transactions={transactions} today={todayISO} />}
         </>
       )}
     </div>

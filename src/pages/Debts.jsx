@@ -9,12 +9,14 @@ import DebtFormModal from '../components/debts/DebtFormModal.jsx'
 import PaymentsModal from '../components/debts/PaymentsModal.jsx'
 import LinkPaymentsModal from '../components/debts/LinkPaymentsModal.jsx'
 import PlannerPanel from '../components/debts/PlannerPanel.jsx'
+import IndicatorRow from '../components/debts/IndicatorRow.jsx'
 import Button from '../components/ui/Button.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { friendlyError } from '../lib/errorMessages.js'
 import { duplicateNameMessage } from '../lib/duplicateName.js'
 import { ACTIVE_DEBT_LIMIT, rowToForm, todayISO } from '../lib/debtForm.js'
 import { buildDebtsCsv, buildDebtPaymentsCsv } from '../lib/debtExport.js'
+import { incomeWindow } from '../lib/debtIndicators.js'
 import {
   readAllPages, readByIds, collectUnlinked, annotateLinks, computeDebtFigures, quietMonths, paymentsExportRows, paymentErrorMessage,
   DUPLICATE_LINK_MESSAGE, MISSING_MESSAGE, NOT_EXPENSE_MESSAGE,
@@ -45,6 +47,7 @@ export default function Debts() {
   const [txById, setTxById] = useState(() => new Map())
   const [accountNames, setAccountNames] = useState(() => new Map())
   const [paymentsError, setPaymentsError] = useState(null)
+  const [incomeRows, setIncomeRows] = useState(null) // D6: income transactions of the last 3 complete months (read-only); null = not read or failed
   const [today, setToday] = useState(() => todayISO())
   const [paymentsDebtId, setPaymentsDebtId] = useState(null)
   const [linkData, setLinkData] = useState(null) // the picker: { debtId, candidates, more, categoryNames }
@@ -76,6 +79,22 @@ export default function Debts() {
     return linkRes.data // the freshly read links (callers must not rely on state, which updates later)
   }
 
+  // D6: income of the last 3 complete calendar months, for the payment burden only. READ-ONLY. If it cannot be read the
+  // indicator says so; nothing else on the page is affected.
+  const loadIncome = async () => {
+    const win = incomeWindow(todayISO())
+    if (!win) { setIncomeRows(null); return }
+    const res = await readAllPages((from, to) =>
+      supabase.from('transactions').select('id, type, amount, transaction_date').eq('user_id', user.id).eq('type', 'income').gte('transaction_date', win.start).lte('transaction_date', win.end).order('transaction_date', { ascending: true }).order('id', { ascending: true }).range(from, to))
+    if (res.error) {
+      // eslint-disable-next-line no-console
+      console.error(res.error)
+      setIncomeRows(null)
+      return
+    }
+    setIncomeRows(res.data)
+  }
+
   const load = async () => {
     if (!user) return
     setLoading(true)
@@ -88,6 +107,7 @@ export default function Debts() {
     }
     setDebts(res.data || [])
     await loadPayments()
+    await loadIncome()
     setLoading(false)
   }
 
@@ -318,6 +338,8 @@ export default function Debts() {
           </Button>
         </div>}
       </div>
+
+      {activeTab === 'active' && debts.length > 0 && !error && <IndicatorRow debts={debts} infoByDebt={infoByDebt} incomeRows={incomeRows} today={today} paymentsReady={paymentsReady} />}
 
       {onPlanner && <PlannerPanel debts={debts} infoByDebt={infoByDebt} today={today} paymentsReady={paymentsReady} />}
 
