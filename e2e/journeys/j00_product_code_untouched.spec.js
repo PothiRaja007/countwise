@@ -1,7 +1,9 @@
 // Product-code guard. Every file under src/ must be byte-for-byte what it was when the last approved phase was locked.
 // P12 locked src/ against p11-src-manifest.json (kept in this folder as the P11 record, unchanged). P14 changed product code
 // on purpose, listed in the P14 report (p14-src-manifest.json is kept as that record). P15 fixed the open findings on purpose and
-// locked the result in p15-src-manifest.json. D7 (verification only) added two test files under src/lib (debtModuleWriteAudit.test.js, debtMigrationReview.test.js) and no product code: p21-src-manifest.json is p20 plus exactly those two files, and this test checks it.
+// locked the result in p15-src-manifest.json. D7 (verification only) added two test files under src/lib and no product code (p21-src-manifest.json is the record: p20 plus exactly those two files).
+// The KL-2 fix (D8) changed product code on purpose: src/components/debts/DebtCard.jsx and src/lib/debtForm.js (one added helper), plus the new test
+// src/lib/debtOpeningFigures.test.js. p22-src-manifest.json records that result and is what this test checks.
 // (Line endings are ignored so a Windows checkout compares equal.) If a LATER phase changes product code on purpose,
 // add a new manifest in that phase and say so in its report.
 import { test, expect } from '@playwright/test'
@@ -11,7 +13,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const manifest = JSON.parse(readFileSync(path.join(root, 'e2e/support/p21-src-manifest.json'), 'utf8'))
+const manifest = JSON.parse(readFileSync(path.join(root, 'e2e/support/p22-src-manifest.json'), 'utf8'))
 
 function hashTree(dir, out = {}) {
   for (const name of readdirSync(path.join(root, dir)).sort()) {

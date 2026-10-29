@@ -151,6 +151,22 @@ export function totalOwedPaise(row) {
 }
 
 /**
+ * KL-2 (D8 fix): may the saved opening figures of this row be shown and calculated from? Exactly the rule the D6 indicators
+ * use for "Figures are not valid" (a real as-of date; principal and unpaid interest finite and not negative; the total a whole
+ * number of paise). debtForm.test.js checks that the two never disagree. An invalid row is never treated as zero.
+ */
+export function hasValidOpeningFigures(row) {
+  if (!row || typeof row !== 'object') return false
+  const fin = (x) => typeof x === 'number' && Number.isFinite(x)
+  const asOf = String(row.as_of_date == null ? '' : row.as_of_date).slice(0, 10)
+  if (!isRealDate(asOf)) return false
+  const principal = Number(row.as_of_outstanding), interest = Number(row.as_of_accrued_interest || 0)
+  if (!fin(principal) || principal < 0 || !fin(interest) || interest < 0) return false
+  const paise = totalOwedPaise(row)
+  return Number.isSafeInteger(paise) && paise >= 0
+}
+
+/**
  * What the card may show for a debt. Cleared and credit-card rows never reach the engine.
  *   { state: 'cleared' }
  *   { state: 'estimate' }                          credit card: opening figures and rate only, labelled an estimate

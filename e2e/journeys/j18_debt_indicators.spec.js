@@ -220,13 +220,14 @@ test('J18 KL-1 (for D7): an invalid opening figure is named and left out of the 
   await page.getByRole('button', { name: 'Add debt' }).click(); await expect(page.getByRole('button', { name: 'Cancel' }).first()).toBeVisible()
   expect(await app.writes()).toEqual([])
 })
-// KL-2 (OPEN, needs approval, NOT a D6 change): the existing D3 debt card shows "₹NaN" for an invalid opening figure.
-// Pinned as it behaves today; when it is fixed on purpose, change this test.
-test('J18 KL-2 (open bug in D3 card, pinned): the existing debt card shows NaN for an invalid opening figure; the indicators do not', async ({ app, page }) => {
+// KL-2 (fixed in D8): the existing debt card used to show "NaN" for an invalid opening figure. It now shows the fallback text
+// and no amount; the indicators are unchanged. The full regression set is j20_debt_invalid_figures.spec.js.
+test('J18 KL-2 (fixed): the debt card shows the fallback text instead of NaN for an invalid opening figure; the indicators never showed NaN', async ({ app, page }) => {
   await app.open('/debts', SEED)
   await page.evaluate(() => window.__e2e.mutate('debts', 'd5', { as_of_outstanding: 'abc' }))
   await revisit(app, page)
-  await expect(page.locator('main')).toContainText('NaN') // D3 card (pinned)
+  await expect(page.locator('main')).not.toContainText('NaN') // D3 card (fixed)
+  await expect(page.getByTestId('debt-invalid')).toHaveText('The saved figures for this debt are not valid. Edit this debt to correct them.')
   expect(await ind(page).innerText()).not.toContain('NaN')       // D6 indicators
 })
 

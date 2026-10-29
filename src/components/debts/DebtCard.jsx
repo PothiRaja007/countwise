@@ -1,7 +1,7 @@
 import { Pencil, Archive, RotateCcw, ReceiptText } from 'lucide-react'
 import { formatCurrency } from '../../lib/format.js'
 import { dateFromISO } from '../../lib/isoDate.js'
-import { debtView, kindLabel, dueDayText } from '../../lib/debtForm.js'
+import { debtView, kindLabel, dueDayText, hasValidOpeningFigures } from '../../lib/debtForm.js'
 
 function fmtDate(iso) {
   return dateFromISO(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -17,11 +17,13 @@ function monthsText(n) {
 // { count, linkedCount, figures, quiet } from lib/debtPayments.js. With no counted payment the card shows exactly
 // what D3 showed: the opening figures, never an invented balance.
 export default function DebtCard({ debt, payments = null, today, onEdit, onClose, onReopen, onPayments }) {
-  const view = debtView(debt)
-  const asOf = fmtDate(debt.as_of_date)
+  // KL-2: saved opening figures that are not valid are never shown as money and never calculated from (nothing is treated as zero).
+  const invalid = !hasValidOpeningFigures(debt)
+  const view = invalid ? { state: 'invalid' } : debtView(debt)
+  const asOf = invalid ? null : fmtDate(debt.as_of_date)
   const closed = debt.status === 'closed'
-  const figures = payments && payments.figures && payments.figures.kind === 'figures' ? payments.figures : null
-  const failed = payments && payments.figures && payments.figures.kind === 'failed'
+  const figures = !invalid && payments && payments.figures && payments.figures.kind === 'figures' ? payments.figures : null
+  const failed = !invalid && payments && payments.figures && payments.figures.kind === 'failed'
   const cleared = view.state === 'cleared' || (figures && figures.cleared)
   const linkedCount = payments ? payments.linkedCount : 0
 
@@ -37,6 +39,13 @@ export default function DebtCard({ debt, payments = null, today, onEdit, onClose
             {closed && <span className="text-xs font-medium text-muted dark:text-mutedDark">Closed</span>}
           </div>
           {debt.lender && <div className="text-xs text-muted dark:text-mutedDark mt-0.5">{debt.lender}</div>}
+
+          {invalid && (
+            <p className="text-sm text-muted dark:text-mutedDark mt-1" data-testid="debt-invalid">
+              The saved figures for this debt are not valid. Edit this debt to correct them.
+            </p>
+          )}
+          {!invalid && (<>
 
           {view.state === 'cleared' ? (
             <div className="text-sm text-muted dark:text-mutedDark mt-1">Nothing owed on {asOf}.</div>
@@ -145,6 +154,8 @@ export default function DebtCard({ debt, payments = null, today, onEdit, onClose
               <div>Calculated from the principal on {asOf}. Unpaid interest is not included.</div>
             </div>
           )}
+
+          </>)}
 
           <div className="mt-3">
             <button
