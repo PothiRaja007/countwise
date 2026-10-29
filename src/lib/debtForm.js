@@ -167,6 +167,30 @@ export function hasValidOpeningFigures(row) {
 }
 
 /**
+ * KL-13 (D9 fix): which SAVED non-opening fields are not valid? Same limits as the database constraints
+ * (supabase/p16_debts.sql) and the engine: rate 0 to 100 with at most 2 decimals; monthly payment above 0, at most
+ * MAX_MONEY, at most 2 decimals; months left a whole number 1 to 600; due day a whole number 1 to 31.
+ * A monthly payment, months left or due day that is null/undefined is simply not entered (not a problem). The rate is
+ * required, so a missing rate IS a problem. Never treated as zero. At least as strict as the D6 indicators' payment rule.
+ */
+export function savedFieldProblems(row) {
+  const r = row && typeof row === 'object' ? row : {}
+  const empty = (v) => v == null
+  const num = (v) => (v === '' || typeof v === 'boolean' || Array.isArray(v) ? NaN : Number(v))
+  const twoDp = (n) => Math.abs(n * 100 - Math.round(n * 100)) < 1e-6
+  const rate = num(r.annual_rate_pct)
+  const pay = num(r.monthly_payment)
+  const months = num(r.remaining_months)
+  const due = num(r.due_day)
+  return {
+    rate: empty(r.annual_rate_pct) || !Number.isFinite(rate) || rate < 0 || rate > 100 || !twoDp(rate),
+    payment: !empty(r.monthly_payment) && (!Number.isFinite(pay) || !(pay > 0) || pay > MAX_MONEY || !twoDp(pay)),
+    months: !empty(r.remaining_months) && !(Number.isInteger(months) && months >= 1 && months <= 600),
+    dueDay: !empty(r.due_day) && !(Number.isInteger(due) && due >= 1 && due <= 31),
+  }
+}
+
+/**
  * What the card may show for a debt. Cleared and credit-card rows never reach the engine.
  *   { state: 'cleared' }
  *   { state: 'estimate' }                          credit card: opening figures and rate only, labelled an estimate

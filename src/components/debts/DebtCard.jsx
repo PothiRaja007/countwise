@@ -1,7 +1,7 @@
 import { Pencil, Archive, RotateCcw, ReceiptText } from 'lucide-react'
 import { formatCurrency } from '../../lib/format.js'
 import { dateFromISO } from '../../lib/isoDate.js'
-import { debtView, kindLabel, dueDayText, hasValidOpeningFigures } from '../../lib/debtForm.js'
+import { debtView, kindLabel, dueDayText, hasValidOpeningFigures, savedFieldProblems } from '../../lib/debtForm.js'
 
 function fmtDate(iso) {
   return dateFromISO(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -20,10 +20,16 @@ export default function DebtCard({ debt, payments = null, today, onEdit, onClose
   // KL-2: saved opening figures that are not valid are never shown as money and never calculated from (nothing is treated as zero).
   const invalid = !hasValidOpeningFigures(debt)
   const view = invalid ? { state: 'invalid' } : debtView(debt)
+  // KL-13: saved rate / monthly payment / months left / due day that are not valid are shown as such, and nothing that
+  // depends on them is calculated or shown. Each field and each calculation is judged on its own inputs.
+  const bad = savedFieldProblems(debt)
+  const emiOk = !bad.rate && !bad.months
+  const scheduleOk = !bad.rate && !bad.payment
+  const FIELD_BAD = 'not valid. Edit this debt to correct it.'
   const asOf = invalid ? null : fmtDate(debt.as_of_date)
   const closed = debt.status === 'closed'
-  const figures = !invalid && payments && payments.figures && payments.figures.kind === 'figures' ? payments.figures : null
-  const failed = !invalid && payments && payments.figures && payments.figures.kind === 'failed'
+  const figures = !invalid && !bad.rate && payments && payments.figures && payments.figures.kind === 'figures' ? payments.figures : null
+  const failed = !invalid && payments && payments.figures && (payments.figures.kind === 'failed' || (bad.rate && payments.figures.kind === 'figures'))
   const cleared = view.state === 'cleared' || (figures && figures.cleared)
   const linkedCount = payments ? payments.linkedCount : 0
 
@@ -57,10 +63,10 @@ export default function DebtCard({ debt, payments = null, today, onEdit, onClose
           )}
 
           <div className="text-xs text-muted dark:text-mutedDark mt-1 space-y-0.5">
-            <div>Interest rate: {Number(debt.annual_rate_pct)}% a year</div>
-            {debt.monthly_payment != null && <div>Monthly payment: <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span></div>}
-            {debt.remaining_months != null && <div>{monthsText(debt.remaining_months)} left on {asOf}</div>}
-            {debt.due_day != null && <div>Due on {dueDayText(debt.due_day)}</div>}
+            {bad.rate ? <div data-testid="debt-rate-invalid">Interest rate: {FIELD_BAD}</div> : <div>Interest rate: {Number(debt.annual_rate_pct)}% a year</div>}
+            {debt.monthly_payment != null && (bad.payment ? <div data-testid="debt-payment-invalid">Monthly payment: {FIELD_BAD}</div> : <div>Monthly payment: <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span></div>)}
+            {debt.remaining_months != null && (bad.months ? <div data-testid="debt-months-invalid">Months left: {FIELD_BAD}</div> : <div>{monthsText(debt.remaining_months)} left on {asOf}</div>)}
+            {debt.due_day != null && (bad.dueDay ? <div data-testid="debt-dueday-invalid">Due day: {FIELD_BAD}</div> : <div>Due on {dueDayText(debt.due_day)}</div>)}
           </div>
 
           {figures && (
@@ -116,7 +122,7 @@ export default function DebtCard({ debt, payments = null, today, onEdit, onClose
             <p className="text-xs text-muted dark:text-mutedDark mt-1" data-testid="debt-quiet">No payment linked in {payments.quiet} months</p>
           )}
 
-          {figures && figures.schedule && (
+          {figures && figures.schedule && scheduleOk && (
             <div className="text-xs text-muted dark:text-mutedDark mt-2 space-y-0.5" data-testid="debt-projection">
               {figures.schedule.paysOff && (
                 <div>
@@ -134,21 +140,21 @@ export default function DebtCard({ debt, payments = null, today, onEdit, onClose
             </div>
           )}
 
-          {!figures && view.state === 'projection' && (view.emi != null || view.schedule) && (
+          {!figures && view.state === 'projection' && ((view.emi != null && emiOk) || (view.schedule && scheduleOk)) && (
             <div className="text-xs text-muted dark:text-mutedDark mt-2 space-y-0.5" data-testid="debt-projection">
-              {view.emi != null && (
+              {view.emi != null && emiOk && (
                 <div>A payment of <span className="font-mono">{formatCurrency(view.emi)}</span> a month would clear the principal in {monthsText(debt.remaining_months)}.</div>
               )}
-              {view.schedule && view.schedule.paysOff && (
+              {view.schedule && scheduleOk && view.schedule.paysOff && (
                 <div>
                   At <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span> a month the principal is paid off in {monthsText(view.schedule.months)}, with about{' '}
                   <span className="font-mono">{formatCurrency(view.schedule.totalInterest)}</span> interest.
                 </div>
               )}
-              {view.schedule && !view.schedule.paysOff && view.schedule.reason === 'payment-not-above-interest' && (
+              {view.schedule && scheduleOk && !view.schedule.paysOff && view.schedule.reason === 'payment-not-above-interest' && (
                 <div>This monthly payment does not cover a month of interest, so the principal would not go down.</div>
               )}
-              {view.schedule && !view.schedule.paysOff && view.schedule.reason === 'exceeds-max-months' && (
+              {view.schedule && scheduleOk && !view.schedule.paysOff && view.schedule.reason === 'exceeds-max-months' && (
                 <div>At this monthly payment the principal would take more than 50 years to clear.</div>
               )}
               <div>Calculated from the principal on {asOf}. Unpaid interest is not included.</div>
