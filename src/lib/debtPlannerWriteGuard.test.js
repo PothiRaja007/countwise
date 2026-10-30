@@ -59,7 +59,7 @@ test('G2: the planner library imports only the engine and the money limit; the p
   assert.deepStrictEqual(imports(code['lib/debtPlanner.js']).sort(), ['./debtEngine.js', './debtForm.js'])
   const panel = imports(code['components/debts/PlannerPanel.jsx'])
   for (const p of panel) assert.ok(!/supabase|AuthContext/i.test(p), `the panel imports ${p}`)
-  assert.deepStrictEqual(panel.slice().sort(), ['../../lib/debtPlanner.js', '../../lib/format.js', '../../lib/isoDate.js', '../ui/Input.jsx', 'react'])
+  assert.deepStrictEqual(panel.slice().sort(), ['../../lib/debtPlanner.js', '../../lib/format.js', '../../lib/isoDate.js', '../ui/Input.jsx', './Disclosure.jsx', 'react'])
 })
 
 test('G3: Debts.jsx has 12 .from() calls: the 11 of D4b plus ONE read-only income query added in D6 (see debtIndicatorsWriteGuard.test.js); the planner tab renders the panel', () => {

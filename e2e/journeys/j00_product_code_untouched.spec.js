@@ -5,7 +5,9 @@
 // The KL-2 fix (D8) changed product code on purpose: src/components/debts/DebtCard.jsx and src/lib/debtForm.js (one added helper), plus the new test
 // src/lib/debtOpeningFigures.test.js. p22-src-manifest.json records that result.
 // The KL-13 fix (D9) changed product code on purpose: the same two files (DebtCard.jsx, and debtForm.js: one more helper, savedFieldProblems), plus the new test
-// src/lib/debtSavedFields.test.js. p23-src-manifest.json records that result and is what this test checks.
+// src/lib/debtSavedFields.test.js. p23-src-manifest.json records that result.
+// D10 (Debt Module UI simplification) changed product code on purpose, presentation only: DebtCard.jsx, IndicatorRow.jsx, PlannerPanel.jsx, pages/Debts.jsx (list layout)
+// and one new component, components/debts/Disclosure.jsx, plus the new test src/lib/debtUiGuard.test.js and the import lists in the two write-guard tests (they now allow ./Disclosure.jsx). p24-src-manifest.json records that result and is what this test checks.
 // (Line endings are ignored so a Windows checkout compares equal.) If a LATER phase changes product code on purpose,
 // add a new manifest in that phase and say so in its report.
 import { test, expect } from '@playwright/test'
@@ -15,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const manifest = JSON.parse(readFileSync(path.join(root, 'e2e/support/p23-src-manifest.json'), 'utf8'))
+const manifest = JSON.parse(readFileSync(path.join(root, 'e2e/support/p24-src-manifest.json'), 'utf8'))
 
 function hashTree(dir, out = {}) {
   for (const name of readdirSync(path.join(root, dir)).sort()) {

@@ -229,6 +229,7 @@ test('J17: the words on the planner page give no advice and carry the disclosure
   await openPlanner(app, page)
   await plan(page, { budget: '13500', amount: '20000', month: '2' })
   await expect(page.getByTestId('planner-results')).toBeVisible()
+  await page.getByTestId('planner-notes').evaluate((el) => { el.open = true }) // D10: the secondary notes are collapsed; the wording check covers them too
   const text = await planner(page).innerText()
   for (const re of BANNED) expect(text, `advice wording ${re}`).not.toMatch(re)
   expect(text).toContain('Not a lender statement. Not financial advice.')

@@ -349,7 +349,7 @@ export default function Debts() {
       {!onPlanner && debts.length > 0 && visible.length === 0 && <EmptyState message={`No ${activeTab} debts.`} className="py-8" />}
 
       {visible.length > 0 && (
-        <div className="divide-y divide-line dark:divide-lineDark border-t border-b border-line dark:border-lineDark">
+        <div className="grid gap-4 md:grid-cols-2 items-start" data-testid="debt-list">
           {visible.map((debt) => (
             <DebtCard
               key={debt.id}

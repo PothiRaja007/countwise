@@ -46,6 +46,7 @@ for (const [label, field, patch] of CASES) {
     expect(await page.locator('main').innerText()).not.toMatch(BAD_TEXT)
     expect(text).toContain(STAYS.principal) // the opening figures are untouched by a bad rate, payment, months or due day
     for (const k of Object.keys(STAYS)) if (k !== field && k !== 'principal') expect(text, `unaffected line "${STAYS[k]}"`).toContain(STAYS[k])
+    if (await c.getByTestId('debt-details').count()) await c.getByTestId('debt-details').evaluate((el) => { el.open = true }) // D10: the projection sits in the collapsed Details
     const proj = (await c.getByTestId('debt-projection').count()) ? await c.getByTestId('debt-projection').innerText() : ''
     const emi = /would clear the principal in 60 months/.test(proj), sched = /is paid off in|does not cover a month of interest|more than 50 years/.test(proj)
     if (field === 'rate') { expect(emi || sched).toBe(false); await expect(c.getByTestId('debt-projection')).toHaveCount(0) }   // both need the rate

@@ -51,7 +51,7 @@ test('J18: the five indicators match an independent calculation, with the mixed-
   await expect(id(page, 'ind-progress-percent')).toHaveText('14.7%')
   await expect(id(page, 'ind-progress-detail')).toContainText('₹8,844.00 of ₹60,000.00 principal')
   // the per-debt breakdown says which basis each amount has; the closed debt is not in it
-  await ind(page).getByText('Show each debt').click()
+  await ind(page).getByText('How this total is worked out').click()
   await expect(id(page, 'ind-meanings')).toContainText('Calculated: as of today')
   await expect(id(page, 'ind-meanings')).toContainText('Opening figure: as of its own date only.')
   const items = id(page, 'ind-item')
@@ -175,7 +175,7 @@ test('J18: a credit card with a linked payment is still labelled an estimate in 
   await app.open('/debts', SEED)
   await page.evaluate(() => { window.__e2e.mutate('debts', 'd4', { as_of_date: '2026-08-01' }); window.__e2e.add('debt_payments', { id: 'lk8', debt_id: 'd4', transaction_id: 'p3' }) }) // Card: figures from 1 Aug, one counted payment (1,200)
   await revisit(app, page)
-  await ind(page).getByText('Show each debt').click()
+  await ind(page).getByText('How this total is worked out').click()
   const card = id(page, 'ind-item').filter({ hasText: 'Card' })
   await expect(card).toContainText('calculated from your figures and linked payments')
   await expect(card).toContainText('(estimate)')
@@ -194,7 +194,7 @@ test('J18: a debt cleared by linked payments is left out of the Debts page month
   await revisit(app, page)
   await expect(id(page, 'ind-monthly-amount')).toHaveText('₹8,000.00') // Bike loan is cleared: its 3,000 is not required
   await expect(id(page, 'ind-monthly-skipped')).toContainText('Bike loan (Cleared)')
-  await ind(page).getByText('Show each debt').click()
+  await ind(page).getByText('How this total is worked out').click()
   await expect(id(page, 'ind-item').filter({ hasText: 'Bike loan' })).toContainText('overpaid')
   await expect(id(page, 'ind-item').filter({ hasText: 'Bike loan' })).toContainText('not subtracted')
   await app.go('/')
@@ -239,7 +239,7 @@ test('J18: the indicators write nothing, change no balance, and keep no data in 
   const balance = await app.balance('a1')
   const tx = await app.rows('transactions'), debts = await app.rows('debts'), links = await app.rows('debt_payments')
   await app.go('/debts'); await expect(ind(page)).toBeVisible()
-  await ind(page).getByText('Show each debt').click()
+  await ind(page).getByText('How this total is worked out').click()
   await tab(page, 'Closed').click(); await tab(page, 'Planner').click(); await tab(page, 'Active').click()
   await app.go('/'); await expect(id(page, 'overview-debts')).toBeVisible()
   await page.reload(); await page.waitForFunction(() => !document.body.innerText.includes('Loading...'))
@@ -253,7 +253,7 @@ test('J18: the indicators write nothing, change no balance, and keep no data in 
 
 test('J18: no advice wording on the indicators or the Overview card, and the page fits the screen', async ({ app, page }) => {
   await app.open('/debts', SEED)
-  await ind(page).getByText('Show each debt').click()
+  await ind(page).getByText('How this total is worked out').click()
   const t1 = await ind(page).innerText()
   for (const re of BANNED) expect(t1, `${re}`).not.toMatch(re)
   await app.noHorizontalScroll()

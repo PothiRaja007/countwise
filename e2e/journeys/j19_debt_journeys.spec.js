@@ -167,7 +167,7 @@ test('J19-3: a lump sum linked to the Bike loan clears it: overpayment shown not
   await linkBy(page, card(page, 'Bike loan'), 'Bike loan', ['Lump sum'])
   await page.keyboard.press('Escape')
   await expectOnly(app, ['debt_payments:insert'], before)
-  await ind(page).getByText('Show each debt').click()
+  await ind(page).getByText('How this total is worked out').click()
   await expect(id(page, 'ind-item').filter({ hasText: 'Bike loan' })).toContainText('overpaid')
   await expect(id(page, 'ind-item').filter({ hasText: 'Bike loan' })).toContainText('not subtracted')
   await expect(id(page, 'ind-total-amount')).toHaveText(inr(P(340000))) // the other three debts only; the overpayment is not taken off
@@ -332,7 +332,7 @@ test('J19-9: browsing Debts, Closed, Planner (with inputs), the indicators and O
   for (const path of ['/debts', '/', '/debts']) {
     await app.go(path)
     if (path === '/debts') {
-      await ind(page).getByText('Show each debt').click()
+      await ind(page).getByText('How this total is worked out').click()
       await tab(page, 'Closed').click(); await tab(page, 'Planner').click()
       await page.getByTestId('planner-budget').fill('15000')
       await tab(page, 'Active').click()
@@ -359,7 +359,7 @@ test('J19-10: Debts card, indicators, Planner and Overview agree where they shou
   await expect(c).toContainText(`Principal outstanding: ${inr(bike.principal)}`)
   await expect(c).toContainText(`Unpaid interest: ${inr(bike.interest)}`)
   await expect(id(page, 'ind-total-amount')).toHaveText(inr(total))                          // indicator = the same figure, summed
-  await ind(page).getByText('Show each debt').click()
+  await ind(page).getByText('How this total is worked out').click()
   await expect(id(page, 'ind-item').filter({ hasText: 'Bike loan' })).toContainText(`principal ${inr(bike.principal)} + unpaid interest ${inr(bike.interest)}`)
   await tab(page, 'Planner').click()                                                          // DOCUMENTED difference 1: Planner uses principal only
   await expect(id(page, 'planner-debt').filter({ hasText: 'Bike loan' })).toContainText(`Starting principal ${inr(bike.principal)}`)
@@ -373,7 +373,7 @@ test('J19-10: Debts card, indicators, Planner and Overview agree where they shou
   // (b) opening snapshot with accrued interest: opening total = principal + unpaid interest, never aged; Planner takes principal only.
   await page.evaluate(() => window.__e2e.mutate('debts', 'd1', { as_of_accrued_interest: 5000 }))
   await revisit(app, page)
-  await ind(page).getByText('Show each debt').click()
+  await ind(page).getByText('How this total is worked out').click()
   await expect(id(page, 'ind-item').filter({ hasText: 'Education loan' })).toContainText(`${inr(P(255000))} opening figure on 1 Oct 2026, not a current balance (principal ${inr(P(250000))} + unpaid interest ${inr(P(5000))}`)
   await expect(id(page, 'ind-total-amount')).toHaveText(inr(total + P(5000)))
   await tab(page, 'Planner').click()

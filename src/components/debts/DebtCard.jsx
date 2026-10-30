@@ -1,6 +1,7 @@
 import { Pencil, Archive, RotateCcw, ReceiptText } from 'lucide-react'
 import { formatCurrency } from '../../lib/format.js'
 import { dateFromISO } from '../../lib/isoDate.js'
+import Disclosure from './Disclosure.jsx'
 import { debtView, kindLabel, dueDayText, hasValidOpeningFigures, savedFieldProblems } from '../../lib/debtForm.js'
 
 function fmtDate(iso) {
@@ -33,160 +34,197 @@ export default function DebtCard({ debt, payments = null, today, onEdit, onClose
   const cleared = view.state === 'cleared' || (figures && figures.cleared)
   const linkedCount = payments ? payments.linkedCount : 0
 
+  const showEstimateBadge = view.state === 'estimate' && !cleared
+  const T = 'text-muted dark:text-mutedDark'
+  const money = (n) => <span className="font-mono">{formatCurrency(n)}</span>
+
+  // Level 2 (secondary): the breakdown, where the figures came from, and the projection. Collapsed by default.
+  const projectionFromFigures = figures && figures.schedule && scheduleOk
+  const projectionFromView = !figures && view.state === 'projection' && ((view.emi != null && emiOk) || (view.schedule && scheduleOk))
+  const hasDetails = !!figures || projectionFromFigures || projectionFromView
+
+  const details = (
+    <Disclosure summary="Details" testId="debt-details" className="mt-2">
+      {figures && (
+        <>
+          {/* The opening figures this calculation started from (shown as the main line when nothing is calculated). */}
+          <div className="font-mono">
+            On {asOf}: principal {formatCurrency(debt.as_of_outstanding)}
+            {Number(debt.as_of_accrued_interest) > 0 && <>, unpaid interest {formatCurrency(debt.as_of_accrued_interest)}</>}
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between gap-3">Principal outstanding: {money(figures.principal)}</div>
+            <div className="flex justify-between gap-3">Unpaid interest: {money(figures.interest)}</div>
+            <div className="flex justify-between gap-3">Principal repaid: {money(figures.principalRepaid)}</div>
+            <div className="flex justify-between gap-3">Interest paid: {money(figures.interestPaid)}</div>
+            {figures.overpaid > 0 && <div className="flex justify-between gap-3">Overpaid: {money(figures.overpaid)} more than was owed</div>}
+          </div>
+          <p>
+            From your figures on {asOf} and {fmtCount(figures.paymentsUsed, 'linked payment')}, as of {fmtDate(today)}. Not a lender statement.
+          </p>
+          {figures.estimate && (
+            <p>Estimate: a credit card changes with every statement, and new spending on the card is not included.</p>
+          )}
+        </>
+      )}
+
+      {projectionFromFigures && (
+        <div className="space-y-0.5" data-testid="debt-projection">
+          {figures.schedule.paysOff && (
+            <div>
+              At <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span> a month the principal outstanding today is paid off in {monthsText(figures.schedule.months)}, with about{' '}
+              <span className="font-mono">{formatCurrency(figures.schedule.totalInterest)}</span> interest.
+            </div>
+          )}
+          {!figures.schedule.paysOff && figures.schedule.reason === 'payment-not-above-interest' && (
+            <div>This monthly payment does not cover a month of interest, so the principal would not go down.</div>
+          )}
+          {!figures.schedule.paysOff && figures.schedule.reason === 'exceeds-max-months' && (
+            <div>At this monthly payment the principal would take more than 50 years to clear.</div>
+          )}
+          <div>Calculated from the principal outstanding today. Unpaid interest is not included.</div>
+        </div>
+      )}
+
+      {projectionFromView && (
+        <div className="space-y-0.5" data-testid="debt-projection">
+          {view.emi != null && emiOk && (
+            <div>A payment of <span className="font-mono">{formatCurrency(view.emi)}</span> a month would clear the principal in {monthsText(debt.remaining_months)}.</div>
+          )}
+          {view.schedule && scheduleOk && view.schedule.paysOff && (
+            <div>
+              At <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span> a month the principal is paid off in {monthsText(view.schedule.months)}, with about{' '}
+              <span className="font-mono">{formatCurrency(view.schedule.totalInterest)}</span> interest.
+            </div>
+          )}
+          {view.schedule && scheduleOk && !view.schedule.paysOff && view.schedule.reason === 'payment-not-above-interest' && (
+            <div>This monthly payment does not cover a month of interest, so the principal would not go down.</div>
+          )}
+          {view.schedule && scheduleOk && !view.schedule.paysOff && view.schedule.reason === 'exceeds-max-months' && (
+            <div>At this monthly payment the principal would take more than 50 years to clear.</div>
+          )}
+          <div>Calculated from the principal on {asOf}. Unpaid interest is not included.</div>
+        </div>
+      )}
+    </Disclosure>
+  )
+
   return (
-    <div className="py-4" data-testid="debt-card">
+    <div
+      className={`rounded-lg border p-4 min-w-0 ${closed ? 'border-dashed border-line dark:border-lineDark' : 'border-line dark:border-lineDark bg-surface dark:bg-charcoalSurface'} ${invalid ? 'border-badText dark:border-badText' : ''}`}
+      data-testid="debt-card"
+    >
+      {/* Level 1: who it is and its status */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-display text-base font-semibold tracking-tight text-ink dark:text-offwhite truncate">{debt.name}</h3>
-            <span className="text-xs font-medium text-muted dark:text-mutedDark">{kindLabel(debt.kind)}</span>
-            {cleared && <span className="text-xs font-medium text-goodText">Cleared</span>}
-            {view.state === 'estimate' && !cleared && <span className="text-xs font-medium text-muted dark:text-mutedDark">Estimate</span>}
-            {closed && <span className="text-xs font-medium text-muted dark:text-mutedDark">Closed</span>}
-          </div>
-          {debt.lender && <div className="text-xs text-muted dark:text-mutedDark mt-0.5">{debt.lender}</div>}
-
-          {invalid && (
-            <p className="text-sm text-muted dark:text-mutedDark mt-1" data-testid="debt-invalid">
-              The saved figures for this debt are not valid. Edit this debt to correct them.
-            </p>
-          )}
-          {!invalid && (<>
-
-          {view.state === 'cleared' ? (
-            <div className="text-sm text-muted dark:text-mutedDark mt-1">Nothing owed on {asOf}.</div>
-          ) : (
-            <div className="font-mono text-sm text-muted dark:text-mutedDark mt-1">
-              On {asOf}: principal {formatCurrency(debt.as_of_outstanding)}
-              {Number(debt.as_of_accrued_interest) > 0 && <>, unpaid interest {formatCurrency(debt.as_of_accrued_interest)}</>}
-            </div>
-          )}
-
-          <div className="text-xs text-muted dark:text-mutedDark mt-1 space-y-0.5">
-            {bad.rate ? <div data-testid="debt-rate-invalid">Interest rate: {FIELD_BAD}</div> : <div>Interest rate: {Number(debt.annual_rate_pct)}% a year</div>}
-            {debt.monthly_payment != null && (bad.payment ? <div data-testid="debt-payment-invalid">Monthly payment: {FIELD_BAD}</div> : <div>Monthly payment: <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span></div>)}
-            {debt.remaining_months != null && (bad.months ? <div data-testid="debt-months-invalid">Months left: {FIELD_BAD}</div> : <div>{monthsText(debt.remaining_months)} left on {asOf}</div>)}
-            {debt.due_day != null && (bad.dueDay ? <div data-testid="debt-dueday-invalid">Due day: {FIELD_BAD}</div> : <div>Due on {dueDayText(debt.due_day)}</div>)}
-          </div>
-
-          {figures && (
-            <div className="mt-2" data-testid="debt-figures">
-              <div className="text-sm text-ink dark:text-offwhite">
-                {figures.estimate ? 'Owed today (estimate)' : 'Owed today (calculated)'}: <span className="font-mono font-semibold">{formatCurrency(figures.owedToday)}</span>
-              </div>
-              <div className="text-xs text-muted dark:text-mutedDark mt-1 space-y-0.5">
-                <div>Principal outstanding: <span className="font-mono">{formatCurrency(figures.principal)}</span></div>
-                <div>Unpaid interest: <span className="font-mono">{formatCurrency(figures.interest)}</span></div>
-                <div>Principal repaid: <span className="font-mono">{formatCurrency(figures.principalRepaid)}</span></div>
-                <div>Interest paid: <span className="font-mono">{formatCurrency(figures.interestPaid)}</span></div>
-                {figures.overpaid > 0 && <div>Overpaid: <span className="font-mono">{formatCurrency(figures.overpaid)}</span> more than was owed</div>}
-              </div>
-              <p className="text-xs text-muted dark:text-mutedDark mt-1">
-                From your figures on {asOf} and {fmtCount(figures.paymentsUsed, 'linked payment')}, as of {fmtDate(today)}. Not a lender statement.
-              </p>
-              {figures.estimate && (
-                <p className="text-xs text-muted dark:text-mutedDark mt-1">
-                  Estimate: a credit card changes with every statement, and new spending on the card is not included.
-                </p>
-              )}
-            </div>
-          )}
-
-          {failed && (
-            <p className="text-xs text-muted dark:text-mutedDark mt-2" data-testid="debt-figures-failed">
-              Couldn't calculate today's figures from the linked payments. The opening figures above are unchanged.
-            </p>
-          )}
-
-          {!figures && view.state === 'estimate' && (
-            <p className="text-xs text-muted dark:text-mutedDark mt-2">
-              Estimate: a credit card changes with every statement, so these are the figures you entered for {asOf}, not a current balance.
-            </p>
-          )}
-
-          {payments && payments.figures && payments.figures.kind === 'same-month' && !cleared && (
-            <p className="text-xs text-muted dark:text-mutedDark mt-2" data-testid="debt-same-month">
-              {fmtCount(payments.figures.paymentsWaiting, 'linked payment')} will be applied from {payments.figures.from}. Figures are calculated month by month, and today is still in the month of your figures.
-            </p>
-          )}
-
-          {payments && payments.figures && payments.figures.kind !== 'same-month' && !figures && !failed && !cleared && !closed && (
-            <p className="text-xs text-muted dark:text-mutedDark mt-2" data-testid="debt-no-payments">
-              {linkedCount === 0
-                ? 'No payments linked yet. Link your payments to see what you owe today.'
-                : 'None of the linked payments is counted yet. Open Payments to see why.'}
-            </p>
-          )}
-
-          {payments && payments.quiet != null && !cleared && !closed && (
-            <p className="text-xs text-muted dark:text-mutedDark mt-1" data-testid="debt-quiet">No payment linked in {payments.quiet} months</p>
-          )}
-
-          {figures && figures.schedule && scheduleOk && (
-            <div className="text-xs text-muted dark:text-mutedDark mt-2 space-y-0.5" data-testid="debt-projection">
-              {figures.schedule.paysOff && (
-                <div>
-                  At <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span> a month the principal outstanding today is paid off in {monthsText(figures.schedule.months)}, with about{' '}
-                  <span className="font-mono">{formatCurrency(figures.schedule.totalInterest)}</span> interest.
-                </div>
-              )}
-              {!figures.schedule.paysOff && figures.schedule.reason === 'payment-not-above-interest' && (
-                <div>This monthly payment does not cover a month of interest, so the principal would not go down.</div>
-              )}
-              {!figures.schedule.paysOff && figures.schedule.reason === 'exceeds-max-months' && (
-                <div>At this monthly payment the principal would take more than 50 years to clear.</div>
-              )}
-              <div>Calculated from the principal outstanding today. Unpaid interest is not included.</div>
-            </div>
-          )}
-
-          {!figures && view.state === 'projection' && ((view.emi != null && emiOk) || (view.schedule && scheduleOk)) && (
-            <div className="text-xs text-muted dark:text-mutedDark mt-2 space-y-0.5" data-testid="debt-projection">
-              {view.emi != null && emiOk && (
-                <div>A payment of <span className="font-mono">{formatCurrency(view.emi)}</span> a month would clear the principal in {monthsText(debt.remaining_months)}.</div>
-              )}
-              {view.schedule && scheduleOk && view.schedule.paysOff && (
-                <div>
-                  At <span className="font-mono">{formatCurrency(debt.monthly_payment)}</span> a month the principal is paid off in {monthsText(view.schedule.months)}, with about{' '}
-                  <span className="font-mono">{formatCurrency(view.schedule.totalInterest)}</span> interest.
-                </div>
-              )}
-              {view.schedule && scheduleOk && !view.schedule.paysOff && view.schedule.reason === 'payment-not-above-interest' && (
-                <div>This monthly payment does not cover a month of interest, so the principal would not go down.</div>
-              )}
-              {view.schedule && scheduleOk && !view.schedule.paysOff && view.schedule.reason === 'exceeds-max-months' && (
-                <div>At this monthly payment the principal would take more than 50 years to clear.</div>
-              )}
-              <div>Calculated from the principal on {asOf}. Unpaid interest is not included.</div>
-            </div>
-          )}
-
-          </>)}
-
-          <div className="mt-3">
-            <button
-              onClick={onPayments}
-              disabled={!payments}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line dark:border-lineDark text-xs font-medium text-ink dark:text-offwhite hover:text-goldText disabled:opacity-40"
-              aria-label={`Payments for ${debt.name}`}
-              title="Linked payments"
-            >
-              <ReceiptText size={14} />
-              Payments{payments ? ` (${linkedCount})` : ''}
-            </button>
+          <h3 className={`font-display text-base font-semibold tracking-tight truncate ${closed ? T : 'text-ink dark:text-offwhite'}`}>{debt.name}</h3>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <span className={`text-xs font-medium border border-line dark:border-lineDark rounded-full px-2 ${T}`}>{kindLabel(debt.kind)}</span>
+            {debt.lender && <span className={`text-xs ${T}`}>{debt.lender}</span>}
           </div>
         </div>
+        <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
+          {cleared && <span className="text-xs font-semibold rounded-full px-2 py-0.5 bg-good/15 text-goodText">Cleared</span>}
+          {showEstimateBadge && <span className="text-xs font-semibold rounded-full px-2 py-0.5 bg-gold/20 text-brown dark:text-gold">Estimate</span>}
+          {closed && <span className={`text-xs font-semibold rounded-full px-2 py-0.5 bg-line dark:bg-lineDark ${T}`}>Closed</span>}
+        </div>
+      </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          <button onClick={onEdit} className="p-1.5 text-muted dark:text-mutedDark hover:text-goldText" aria-label="Edit debt" title="Edit">
+      {invalid && (
+        <p className="text-sm text-badText mt-3" data-testid="debt-invalid">
+          The saved figures for this debt are not valid. Edit this debt to correct them.
+        </p>
+      )}
+
+      {!invalid && (<>
+
+        {/* The one figure that matters */}
+        {figures ? (
+          <div className="mt-3" data-testid="debt-figures">
+            <div className={closed ? T : 'text-ink dark:text-offwhite'}>
+              <span className="block text-xs font-medium text-muted dark:text-mutedDark">{figures.estimate ? 'Owed today (estimate)' : 'Owed today (calculated)'}:</span>{' '}
+              <span className="block font-mono text-2xl font-semibold tracking-tight">{formatCurrency(figures.owedToday)}</span>
+            </div>
+            <p className={`text-xs mt-0.5 ${T}`}>As of {fmtDate(today)}. Not a lender statement.</p>
+            {hasDetails && details}
+          </div>
+        ) : (
+          <div className="mt-3">
+            {view.state === 'cleared' ? (
+              <div className={`text-sm ${T}`}>Nothing owed on {asOf}.</div>
+            ) : (
+              <div className={`font-mono text-sm ${T}`}>
+                On {asOf}: principal <span className="text-xl font-semibold text-ink dark:text-offwhite">{formatCurrency(debt.as_of_outstanding)}</span>
+                {Number(debt.as_of_accrued_interest) > 0 && <>, unpaid interest {formatCurrency(debt.as_of_accrued_interest)}</>}
+              </div>
+            )}
+            {hasDetails && details}
+          </div>
+        )}
+
+        {/* Loan terms, each exactly as before (including the "not valid" messages) */}
+        <div className={`grid gap-x-4 gap-y-1 sm:grid-cols-2 text-xs mt-3 pt-3 border-t border-line dark:border-lineDark ${T}`}>
+          {bad.rate ? <div className="text-badText" data-testid="debt-rate-invalid">Interest rate: {FIELD_BAD}</div> : <div>Interest rate: <span className="font-mono text-ink dark:text-offwhite">{Number(debt.annual_rate_pct)}% a year</span></div>}
+          {debt.monthly_payment != null && (bad.payment ? <div className="text-badText" data-testid="debt-payment-invalid">Monthly payment: {FIELD_BAD}</div> : <div>Monthly payment: <span className="font-mono text-ink dark:text-offwhite">{formatCurrency(debt.monthly_payment)}</span></div>)}
+          {debt.remaining_months != null && (bad.months ? <div className="text-badText" data-testid="debt-months-invalid">Months left: {FIELD_BAD}</div> : <div>{monthsText(debt.remaining_months)} left on {asOf}</div>)}
+          {debt.due_day != null && (bad.dueDay ? <div className="text-badText" data-testid="debt-dueday-invalid">Due day: {FIELD_BAD}</div> : <div>Due on {dueDayText(debt.due_day)}</div>)}
+        </div>
+
+        {/* Short status lines that change how the figure is read stay visible */}
+        {failed && (
+          <p className={`text-xs mt-2 ${T}`} data-testid="debt-figures-failed">
+            Couldn't calculate today's figures from the linked payments. The opening figures above are unchanged.
+          </p>
+        )}
+
+        {!figures && view.state === 'estimate' && (
+          <p className={`text-xs mt-2 ${T}`}>
+            Estimate: a credit card changes with every statement, so these are the figures you entered for {asOf}, not a current balance.
+          </p>
+        )}
+
+        {payments && payments.figures && payments.figures.kind === 'same-month' && !cleared && (
+          <p className={`text-xs mt-2 ${T}`} data-testid="debt-same-month">
+            {fmtCount(payments.figures.paymentsWaiting, 'linked payment')} will be applied from {payments.figures.from}. Figures are calculated month by month, and today is still in the month of your figures.
+          </p>
+        )}
+
+        {payments && payments.figures && payments.figures.kind !== 'same-month' && !figures && !failed && !cleared && !closed && (
+          <p className={`text-xs mt-2 ${T}`} data-testid="debt-no-payments">
+            {linkedCount === 0
+              ? 'No payments linked yet. Link your payments to see what you owe today.'
+              : 'None of the linked payments is counted yet. Open Payments to see why.'}
+          </p>
+        )}
+
+        {payments && payments.quiet != null && !cleared && !closed && (
+          <p className={`text-xs mt-1 ${T}`} data-testid="debt-quiet">No payment linked in {payments.quiet} months</p>
+        )}
+
+      </>)}
+
+      {/* Level 3: actions */}
+      <div className="flex items-center gap-1 mt-3 pt-3 border-t border-line dark:border-lineDark">
+        <button
+          onClick={onPayments}
+          disabled={!payments}
+          className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg border border-line dark:border-lineDark text-xs font-medium text-ink dark:text-offwhite hover:text-goldText disabled:opacity-40"
+          aria-label={`Payments for ${debt.name}`}
+          title="Linked payments"
+        >
+          <ReceiptText size={14} />
+          Payments{payments ? ` (${linkedCount})` : ''}
+        </button>
+        <div className="flex items-center gap-1 ml-auto">
+          <button onClick={onEdit} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-muted dark:text-mutedDark hover:text-goldText" aria-label="Edit debt" title="Edit">
             <Pencil size={16} />
           </button>
           {closed ? (
-            <button onClick={onReopen} className="p-1.5 text-muted dark:text-mutedDark hover:text-goldText" aria-label="Reopen debt" title="Reopen">
+            <button onClick={onReopen} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-muted dark:text-mutedDark hover:text-goldText" aria-label="Reopen debt" title="Reopen">
               <RotateCcw size={16} />
             </button>
           ) : (
-            <button onClick={onClose} className="p-1.5 text-muted dark:text-mutedDark hover:text-badText" aria-label="Close debt" title="Close">
+            <button onClick={onClose} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-muted dark:text-mutedDark hover:text-badText" aria-label="Close debt" title="Close">
               <Archive size={16} />
             </button>
           )}

@@ -48,7 +48,7 @@ test('G1: the three new files contain no database call, write, network call or s
 test('G2: imports are limited; no effect, form or submit in the components', () => {
   const imports = (c) => [...c.matchAll(/^\s*import\s[^'"]*['"]([^'"]+)['"]/gm)].map((m) => m[1]).sort()
   assert.deepStrictEqual(imports(code['lib/debtIndicators.js']), ['./debtForm.js', './financialEngine.js'])
-  assert.deepStrictEqual(imports(code['components/debts/IndicatorRow.jsx']), ['../../lib/debtIndicators.js', '../../lib/format.js', '../../lib/isoDate.js', 'react'])
+  assert.deepStrictEqual(imports(code['components/debts/IndicatorRow.jsx']), ['../../lib/debtIndicators.js', '../../lib/format.js', '../../lib/isoDate.js', './Disclosure.jsx', 'react'])
   assert.deepStrictEqual(imports(code['components/debts/OverviewDebtCard.jsx']), ['../../lib/debtIndicators.js', '../../lib/format.js', 'react', 'react-router-dom'])
   for (const f of NEW_FILES.slice(1)) {
     assert.ok(!/useEffect\s*\(/.test(code[f]), `${f} has an effect`)
